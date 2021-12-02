@@ -87,6 +87,20 @@ endif()
 #find_library(REDIS_PLUS_PLUS_LIB redis++)
 
 ###
+# stduuid
+###
+find_package(stduuid QUIET)
+if(NOT stduuid_FOUND)
+  message(STATUS "Downloading and building stduuid dependency")
+  FetchContent_Declare(stduuid
+    GIT_REPOSITORY https://github.com/mariusbancila/stduuid.git
+  )
+  FetchContent_Populate(stduuid)
+  FetchContent_MakeAvailable(stduuid)
+  add_subdirectory(${stduuid_SOURCE_DIR} ${stduuid_BINARY_DIR})
+endif()
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})
