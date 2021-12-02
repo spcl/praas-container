@@ -24,10 +24,11 @@ if(NOT sockpp_FOUND)
   message(STATUS "Downloading and building sockpp dependency")
   FetchContent_Declare(sockpp
     GIT_REPOSITORY https://github.com/fpagliughi/sockpp
-    CMAKE_ARGS -DSOCKPP_BUILD_EXAMPLES=Off -DSOCKPP_BUILD_TESTS=Off
   )
   FetchContent_Populate(sockpp)
   FetchContent_MakeAvailable(sockpp)
+  set(SOCKPP_BUILD_SHARED OFF CACHE INTERNAL "Build SHARED libraries")
+  set(SOCKPP_BUILD_STATIC ON CACHE INTERNAL "Build SHARED libraries")
   add_subdirectory(${sockpp_SOURCE_DIR} ${sockpp_BINARY_DIR})
 endif()
 
