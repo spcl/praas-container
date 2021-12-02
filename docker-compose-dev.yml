@@ -1,0 +1,33 @@
+version: '3.7'
+
+services:
+
+  redis:
+    image: redis:latest
+    expose:
+      - "6379"
+
+  control_plane:
+    image: praas/control_plane-dev
+    # Needed to correctly handle signals
+    tty: true
+    init: true
+    depends_on:
+      - redis
+    expose:
+      - "8080"
+    volumes:
+      - ./${DEV}:/dev-praas
+    environment:
+      - REDIS_HOST=tcp://redis:6379
+
+  haproxy:
+    image: haproxy:latest
+    depends_on:
+      - control_plane
+    volumes:
+      - ./deployment/conf/haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "8080:8080"
+
+
