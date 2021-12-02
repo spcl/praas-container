@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+
+  control_plane:
+    image: praas/control_plane
+    expose:
+      - "8080"
+
+  haproxy:
+    image: haproxy:latest
+    depends_on:
+      - control_plane
+    volumes:
+      - ./deployment/conf/haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "8080:8080"
+
+
