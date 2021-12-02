@@ -65,6 +65,28 @@ if(NOT threadpool_POPULATED)
 endif()
 
 ###
+# redis
+###
+find_path(HIREDIS_HEADER hiredis)
+find_library(HIREDIS_LIB hiredis)
+find_package(redis QUIET)
+if(NOT redis_FOUND)
+  message(STATUS "Downloading and building redis-plus-plus dependency")
+  FetchContent_Declare(redis
+    GIT_REPOSITORY https://github.com/sewenew/redis-plus-plus.git
+    GIT_TAG master
+  )
+  FetchContent_Populate(redis)
+  FetchContent_MakeAvailable(redis)
+  add_subdirectory(${redis_SOURCE_DIR} ${redis_BINARY_DIR})
+else()
+  add_custom_target(redis)
+endif()
+# required by the library specifically - otherwise the header paths are not correct
+#find_path(REDIS_PLUS_PLUS_HEADER sw)
+#find_library(REDIS_PLUS_PLUS_LIB redis++)
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})

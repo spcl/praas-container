@@ -2,10 +2,19 @@ version: '3'
 
 services:
 
+  redis:
+    image: redis:latest
+    expose:
+      - "6379"
+
   control_plane:
     image: praas/control_plane
+    depends_on:
+      - redis
     expose:
       - "8080"
+    environment:
+      - REDIS_HOST=tcp://redis:6379
 
   haproxy:
     image: haproxy:latest
