@@ -51,6 +51,20 @@ else()
 endif()
 
 ###
+# threadpool
+###
+FetchContent_Declare(threadpool
+  GIT_REPOSITORY https://github.com/bshoshany/thread-pool.git
+  GIT_TAG master
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+)
+FetchContent_GetProperties(threadpool)
+if(NOT threadpool_POPULATED)
+  FetchContent_Populate(threadpool)
+endif()
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})

@@ -44,6 +44,7 @@ add_dependencies(control_plane spdlog::spdlog)
 target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(control_plane SYSTEM PRIVATE ${threadpool_SOURCE_DIR})
 target_link_libraries(control_plane PRIVATE spdlog::spdlog)
 target_link_libraries(control_plane PRIVATE sockpp-static)
 
