@@ -55,3 +55,37 @@ target_link_libraries(control_plane PRIVATE stduuid)
 target_link_libraries(control_plane PRIVATE ${HIREDIS_LIB})
 #target_link_libraries(control_plane PRIVATE ${REDIS_PLUS_PLUS_LIB})
 
+###
+# Runtime library.
+###
+file(GLOB runtime_library_files "runtime/lib/*.cpp")
+add_library(runtime_library STATIC ${runtime_library_files})
+set_target_properties(runtime_library PROPERTIES RUNTIME_OUTPUT_DIRECTORY lib)
+add_dependencies(runtime_library cxxopts::cxxopts)
+add_dependencies(runtime_library sockpp-static)
+add_dependencies(runtime_library spdlog::spdlog)
+target_include_directories(runtime_library PUBLIC "runtime/include")
+target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(runtime_library PRIVATE spdlog::spdlog)
+target_link_libraries(runtime_library PRIVATE sockpp-static)
+
+###
+# Local Worker
+###
+file(GLOB local_worker_files "system/local-worker/*.cpp")
+add_executable(local_worker ${local_worker_files})
+set_target_properties(local_worker PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin)
+add_dependencies(local_worker cxxopts::cxxopts)
+add_dependencies(local_worker sockpp-static)
+add_dependencies(local_worker spdlog::spdlog)
+add_dependencies(local_worker runtime_library)
+target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:runtime_library,INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(local_worker PRIVATE spdlog::spdlog)
+target_link_libraries(local_worker PRIVATE sockpp-static)
+target_link_libraries(local_worker PRIVATE runtime_library)
+
