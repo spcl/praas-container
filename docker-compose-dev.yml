@@ -12,8 +12,8 @@ services:
     # Needed to correctly handle signals
     tty: true
     init: true
-    ports:
-      - "8081:8080"
+    expose:
+      - "8080"
     volumes:
       - ./${DEV}:/dev-praas
     environment:
@@ -33,7 +33,8 @@ services:
       - ./${DEV}:/dev-praas
     environment:
       - REDIS_HOST=tcp://redis:6379
-      - LOCAL_WORKER=local_worker:8081
+      - LOCAL_WORKER=local_worker:8080
+      - IP_ADDRESS=control_plane
 
   haproxy:
     image: haproxy:latest
