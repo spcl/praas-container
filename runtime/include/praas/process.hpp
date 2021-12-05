@@ -54,7 +54,6 @@ namespace praas::process {
       return *this;
     }
 
-
     static std::optional<Process> create(std::string ip_address, int32_t port, int16_t max_sessions);
     void start();
     void shutdown();

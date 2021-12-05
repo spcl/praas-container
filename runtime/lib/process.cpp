@@ -14,10 +14,14 @@ namespace praas::process {
   std::optional<Process> Process::create(std::string ip_address, int32_t port, int16_t max_sessions)
   {
     try {
-      sockpp::tcp_connector socket(sockpp::inet_address(ip_address, port));
-      if(socket.connect(sockpp::inet_address(ip_address, port)))
+      sockpp::tcp_connector socket;
+      if(socket.connect(sockpp::inet_address(ip_address, port))) {
+        spdlog::debug(
+          "Succesful connection to {}:{} from {}",
+          ip_address, port, socket.address().to_string()
+        );
         return std::make_optional<Process>(std::move(socket), max_sessions);
-      else
+      } else
         return std::optional<Process>();
     } catch (...) {
       return std::optional<Process>();
@@ -45,6 +49,18 @@ namespace praas::process {
           _control_plane_socket.last_error_str()
         );
         continue;
+      } else if (read_size == req.REQUEST_BUF_SIZE) {
+        spdlog::error(
+          "Error accepting incoming session allocation request, incorrect size: {}",
+          read_size
+        );
+        continue;
+      } else if (read_size == 0){
+        spdlog::debug(
+          "End of file on connection with {}.",
+          _control_plane_socket.peer_address().to_string()
+        );
+        break;
       }
 
       spdlog::debug(
