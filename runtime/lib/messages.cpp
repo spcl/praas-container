@@ -19,10 +19,12 @@ namespace praas::messages {
     return 18;
   }
 
-  std::unique_ptr<RecvMessage> RecvMessage::parse(ssize_t data_size)
+  std::unique_ptr<RecvMessage> RecvMessageBuffer::parse(ssize_t data_size)
   {
     int16_t type = *reinterpret_cast<int16_t*>(data);
-    if(data_size == SessionRequestMsg::EXPECTED_LENGTH && type == 0) {
+    if(data_size == SessionRequestMsg::EXPECTED_LENGTH
+        && type == static_cast<int16_t>(RecvMessage::Type::SESSION_REQUEST)
+    ) {
       return std::make_unique<SessionRequestMsg>(data + 2);
     } else {
       return nullptr;
@@ -31,18 +33,17 @@ namespace praas::messages {
 
   std::string SessionRequestMsg::session_id()
   {
-    return std::string{reinterpret_cast<char*>(buf + 6), 15};
+    return std::string{reinterpret_cast<char*>(buf + 8), 16};
   }
 
   int32_t SessionRequestMsg::max_functions()
   {
     return *reinterpret_cast<int32_t*>(buf);
-
   }
 
   int32_t SessionRequestMsg::memory_size()
   {
-
+    return *reinterpret_cast<int32_t*>(buf + 4);
   }
 
   RecvMessage::Type SessionRequestMsg::type() const

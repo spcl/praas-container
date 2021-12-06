@@ -20,8 +20,8 @@ namespace praas::process {
       sockpp::tcp_connector socket;
       if(socket.connect(sockpp::inet_address(ip_address, port))) {
         spdlog::debug(
-          "Succesful connection to {}:{} from {}",
-          ip_address, port, socket.address().to_string()
+          "Succesful connection to {}:{} from {} on process {}",
+          ip_address, port, socket.address().to_string(), process_id
         );
         return std::make_optional<Process>(process_id, std::move(socket), max_sessions);
       } else
@@ -44,12 +44,12 @@ namespace praas::process {
     }
 
     // FIXME: here also accept new requests to connect from data plane (user).
-    spdlog::info("Process begins work!");
-    praas::session::Request req;
+    spdlog::info("Process {} begins work!", this->_process_id);
+    praas::messages::RecvMessageBuffer msg;
     while(!_ending) {
 
       // Read requests to allocate new sessions
-      ssize_t read_size = _control_plane_socket.read(req.buf, req.REQUEST_BUF_SIZE);
+      ssize_t read_size = _control_plane_socket.read(msg.data, msg.REQUEST_BUF_SIZE);
 
       if(_ending)
         break;
@@ -57,12 +57,6 @@ namespace praas::process {
         spdlog::error(
           "Error accepting incoming session allocation request, reason: {}",
           _control_plane_socket.last_error_str()
-        );
-        continue;
-      } else if (read_size == req.REQUEST_BUF_SIZE) {
-        spdlog::error(
-          "Error accepting incoming session allocation request, incorrect size: {}",
-          read_size
         );
         continue;
       } else if (read_size == 0){
@@ -73,34 +67,51 @@ namespace praas::process {
         break;
       }
 
-      spdlog::debug(
-        "Received session allocation request: max functions {}, memory {}, session id {}",
-        req.max_functions(), req.memory_size(), req.session_id()
-      );
-      ErrorCode result = ErrorCode::SUCCESS;
-      // Check if we have capacity
-      if(_sessions.size() >= _max_sessions) {
-        result = ErrorCode::NO_MORE_CAPACITY;
+      std::unique_ptr<praas::messages::RecvMessage> req = msg.parse(read_size);
+      if(!req) {
+        spdlog::error("Incorrect message of size {} received.", read_size);
+        continue;
+      }
+      ErrorCode result = ErrorCode::UNKNOWN_FAILURE;
+      if(req.get()->type() == praas::messages::RecvMessage::Type::SESSION_REQUEST) {
+        result = allocate_session(*dynamic_cast<praas::messages::SessionRequestMsg*>(req.get()));
       } else {
-        // Verify conflicts - simple search
-        auto it = std::find_if(
-          _sessions.begin(), _sessions.end(),
-          [&req](const praas::session::Session & s) {
-            return s.session_id == req.session_id();
-          }
-        );
-        if(it != _sessions.end()) {
-          result = ErrorCode::SESSION_CONFLICT; 
-        }
-        // Now we can start a session
-        else {
-          _sessions.emplace_back(req.session_id(), req.max_functions(), req.memory_size());
-        }
+        spdlog::error("Unknown type of request!");
       }
       // Notify the control plane about success/failure
       _control_plane_socket.write(&result, sizeof(ErrorCode));
     }
     spdlog::info("Process ends work!");
+  }
+
+  ErrorCode Process::allocate_session(praas::messages::SessionRequestMsg& msg)
+  {
+    spdlog::debug(
+      "Received session allocation request: max functions {}, memory {}, session id {}",
+      msg.max_functions(), msg.memory_size(), msg.session_id()
+    );
+
+    ErrorCode result = ErrorCode::SUCCESS;
+    // Check if we have capacity
+    if(_sessions.size() >= _max_sessions) {
+      result = ErrorCode::NO_MORE_CAPACITY;
+    } else {
+      // Verify conflicts - simple search
+      auto it = std::find_if(
+        _sessions.begin(), _sessions.end(),
+        [&msg](const praas::session::Session & s) {
+          return s.session_id == msg.session_id();
+        }
+      );
+      if(it != _sessions.end()) {
+        result = ErrorCode::SESSION_CONFLICT; 
+      }
+      // Now we can start a session
+      else {
+        _sessions.emplace_back(msg.session_id(), msg.max_functions(), msg.memory_size());
+      }
+    }
+    return result;
   }
 
   void Process::shutdown()

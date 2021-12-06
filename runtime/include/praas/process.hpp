@@ -2,6 +2,7 @@
 #ifndef __RUNTIME_PROCESS_HPP__
 #define __RUNTIME_PROCESS_HPP__
 
+#include "praas/messages.hpp"
 #include <cstdint>
 #include <vector>
 #include <optional>
@@ -15,7 +16,8 @@ namespace praas::process {
   enum class ErrorCode : int32_t {
     SUCCESS = 0,
     NO_MORE_CAPACITY = 1,
-    SESSION_CONFLICT
+    SESSION_CONFLICT = 2,
+    UNKNOWN_FAILURE
   };
 
   struct Process {
@@ -40,6 +42,7 @@ namespace praas::process {
       this->_ending = std::move(p._ending);
       this->_max_sessions = std::move(p._max_sessions);
       this->_sessions = std::move(p._sessions);
+      this->_process_id = std::move(p._process_id);
     }
 
     Process & operator=(Process && p) noexcept
@@ -52,15 +55,17 @@ namespace praas::process {
         this->_ending = std::move(p._ending);
         this->_max_sessions = std::move(p._max_sessions);
         this->_sessions = std::move(p._sessions);
+        this->_process_id = std::move(p._process_id);
       }
       return *this;
     }
 
     static std::optional<Process> create(
-      std::string procses_id, std::string ip_address, int32_t port, int16_t max_sessions
+      std::string process_id, std::string ip_address, int32_t port, int16_t max_sessions
     );
     void start();
     void shutdown();
+    ErrorCode allocate_session(praas::messages::SessionRequestMsg&);
   };
 
 };

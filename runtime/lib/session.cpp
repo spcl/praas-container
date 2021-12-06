@@ -9,7 +9,7 @@ namespace praas::session {
     size(size)
   {
     // Shared between processes?
-    _ptr = mmap(nullptr, size, PROT_WRITE, MAP_SHARED, 0, 0);
+    _ptr = mmap(nullptr, size * 1024, PROT_WRITE, MAP_SHARED, 0, 0);
   }
 
   SharedMemory::~SharedMemory()
@@ -29,9 +29,9 @@ namespace praas::session {
   void Session::run()
   {
     // FIXME: Connect to control plane and data plane for invocations
-    while(!ending) {
+    //while(!ending) {
 
-    }
+    //}
   }
 
   void Session::shutdown()
