@@ -5,12 +5,10 @@
 #include <cstdint>
 #include <string>
 
+#include <sockpp/tcp_connector.h>
+
 namespace praas::messages {
   struct FunctionRequestMsg;
-}
-
-namespace sockpp {
-  struct tcp_connector;
 }
 
 namespace praas::session {

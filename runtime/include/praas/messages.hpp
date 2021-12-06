@@ -50,6 +50,12 @@ namespace praas::messages {
     // 16 bytes of session id
     // 26 bytes
 
+    // Function invocation request
+    // 2 bytes of identifier
+    // 4 bytes payload size
+    // 16 bytes of function id
+    // 22 bytes
+
     static constexpr uint16_t REQUEST_BUF_SIZE = 26;
     int8_t data[REQUEST_BUF_SIZE];
 
@@ -70,22 +76,18 @@ namespace praas::messages {
     Type type() const override;
   };
 
-  struct FunctionRequestMsg {
-    // Function invocation request
-    // 2 bytes of identifier
-    // 4 bytes payload size
-    // 16 bytes of function id
-    // 22 bytes
-    // N bytes of payload
+  struct FunctionRequestMsg : RecvMessage {
 
-    static constexpr uint16_t HEADER_LENGTH = 22;
-    ssize_t buf_size;
+    static constexpr uint16_t EXPECTED_LENGTH = 22;
     int8_t* buf;
 
-    FunctionRequestMsg(ssize_t payload_size);
+    FunctionRequestMsg(int8_t* buf = nullptr):
+      buf(buf)
+    {}
+
     std::string function_id();
     int32_t payload();
-    ssize_t size();
+    Type type() const override;
   };
 
 }

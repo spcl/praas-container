@@ -65,6 +65,7 @@ namespace praas::session {
 
   void SessionFork::shutdown()
   {
+    // FIXME: kill the process
   }
 
   Session::Session(std::string session_id, int32_t max_functions, int32_t memory_size):
@@ -79,28 +80,12 @@ namespace praas::session {
     ssize_t bytes, praas::messages::FunctionRequestMsg & msg, sockpp::tcp_connector & connection
   )
   {
-    // EOF
-    if(bytes == 0) {
-      spdlog::debug("End of file on connection with {}.", connection.peer_address().to_string());
-      return;
-    }
-    // Incorrect read
-    else if(bytes == -1) {
-      spdlog::debug("Incorrect read on connection with {}.", connection.peer_address().to_string());
-      return;
-    }
-    // Incorrect request
-    else if(bytes < msg.HEADER_LENGTH) {
-      spdlog::debug(
-        "Incorrect request size of {} read on connection with {}.",
-        bytes, connection.peer_address().to_string()
-      );
-      return;
-    }
-
     std::string fname = msg.function_id();
     spdlog::info("Invoking function {} with {} payload", fname, msg.payload());
     // FIXME: function invocation
+    std::unique_ptr<int8_t[]> arr{new int8_t[msg.payload()]};
+    ssize_t payload_bytes = connection.read(arr.get(), msg.payload());
+    spdlog::info("Function {}, received {} payload", fname, payload_bytes);
     spdlog::info("Invoked function {} with {} payload", fname, msg.payload());
   }
 
@@ -131,14 +116,36 @@ namespace praas::session {
 
     // FIXME: Connect to control plane and data plane for invocations
     spdlog::info("Session {} begins work!", this->session_id);
+
+    // FIXME: Read from data plane
     // FIXME: ring buffer
-    // FIXME: payload size - fix 1 MB
-    praas::messages::FunctionRequestMsg msg{1024*1024};
+    praas::messages::RecvMessageBuffer msg;
     while(!ending) {
-      ssize_t bytes = control_plane_connection.read(msg.buf, msg.size());
+      ssize_t bytes = control_plane_connection.read(msg.data, msg.REQUEST_BUF_SIZE);
       if(ending)
         break;
-      process_invocation(bytes, msg, control_plane_connection);
+      // EOF
+      if(bytes == 0) {
+        spdlog::debug(
+          "End of file on connection with {}.",
+          control_plane_connection.peer_address().to_string()
+        );
+        return;
+      }
+      // Incorrect read
+      else if(bytes == -1) {
+        spdlog::debug(
+          "Incorrect read on connection with {}.",
+          control_plane_connection.peer_address().to_string()
+        );
+        return;
+      }
+      std::unique_ptr<praas::messages::RecvMessage> ptr = msg.parse(bytes);
+      process_invocation(
+        bytes,
+        dynamic_cast<praas::messages::FunctionRequestMsg&>(*ptr.get()),
+        control_plane_connection
+      );
     }
     spdlog::info("Session {} ends work!", this->session_id);
   }

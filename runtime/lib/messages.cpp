@@ -26,6 +26,10 @@ namespace praas::messages {
         && type == static_cast<int16_t>(RecvMessage::Type::SESSION_REQUEST)
     ) {
       return std::make_unique<SessionRequestMsg>(data + 2);
+    } else if(data_size == FunctionRequestMsg::EXPECTED_LENGTH
+        && type == static_cast<int16_t>(RecvMessage::Type::INVOCATION_REQUEST)
+    ) {
+      return std::make_unique<FunctionRequestMsg>(data + 2);
     } else {
       return nullptr;
     }
@@ -51,11 +55,6 @@ namespace praas::messages {
     return RecvMessage::Type::SESSION_REQUEST;
   }
 
-  FunctionRequestMsg::FunctionRequestMsg(ssize_t payload_size):
-    buf_size(HEADER_LENGTH + payload_size),
-    buf(new int8_t[buf_size])
-  {}
-
   std::string FunctionRequestMsg::function_id()
   {
     return std::string{reinterpret_cast<char*>(buf + 4), 16};
@@ -66,8 +65,9 @@ namespace praas::messages {
     return *reinterpret_cast<int32_t*>(buf);
   }
 
-  ssize_t FunctionRequestMsg::size()
+  RecvMessage::Type FunctionRequestMsg::type() const
   {
-    return buf_size;
+    return RecvMessage::Type::INVOCATION_REQUEST;
   }
+
 }
