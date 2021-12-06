@@ -8,10 +8,13 @@
 
 #include <praas/process.hpp>
 #include <praas/session.hpp>
+#include <praas/messages.hpp>
 
 namespace praas::process {
  
-  std::optional<Process> Process::create(std::string ip_address, int32_t port, int16_t max_sessions)
+  std::optional<Process> Process::create(
+    std::string process_id, std::string ip_address, int32_t port, int16_t max_sessions
+  )
   {
     try {
       sockpp::tcp_connector socket;
@@ -20,7 +23,7 @@ namespace praas::process {
           "Succesful connection to {}:{} from {}",
           ip_address, port, socket.address().to_string()
         );
-        return std::make_optional<Process>(std::move(socket), max_sessions);
+        return std::make_optional<Process>(process_id, std::move(socket), max_sessions);
       } else
         return std::optional<Process>();
     } catch (...) {
@@ -33,12 +36,19 @@ namespace praas::process {
     if (!_control_plane_socket)
       spdlog::error("Couldn't connect to control plane! {}", _control_plane_socket.last_error_str());
 
+    // Now let's identify ourselves to the control plane
+    {
+      praas::messages::SendMessage msg;
+      ssize_t bytes_size = msg.fill_process_identification(this->_process_id);
+      _control_plane_socket.write(msg.data, bytes_size);
+    }
+
     // FIXME: here also accept new requests to connect from data plane (user).
     spdlog::info("Process begins work!");
     praas::session::Request req;
     while(!_ending) {
 
-      // Read requests to allocate new sesions
+      // Read requests to allocate new sessions
       ssize_t read_size = _control_plane_socket.read(req.buf, req.REQUEST_BUF_SIZE);
 
       if(_ending)

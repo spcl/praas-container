@@ -21,13 +21,15 @@ namespace praas::process {
   struct Process {
     bool _ending;
     int16_t _max_sessions;
+    std::string _process_id;
     std::vector<praas::session::Session> _sessions;
     // Connect to process to allocate sessions.
     sockpp::tcp_connector _control_plane_socket;
 
-    Process(sockpp::tcp_connector && socket, int16_t max_sessions):
+    Process(std::string process_id, sockpp::tcp_connector && socket, int16_t max_sessions):
       _ending(false),
-      _max_sessions(max_sessions)
+      _max_sessions(max_sessions),
+      _process_id(process_id)
     {
       _control_plane_socket = std::move(socket); 
     }
@@ -54,7 +56,9 @@ namespace praas::process {
       return *this;
     }
 
-    static std::optional<Process> create(std::string ip_address, int32_t port, int16_t max_sessions);
+    static std::optional<Process> create(
+      std::string procses_id, std::string ip_address, int32_t port, int16_t max_sessions
+    );
     void start();
     void shutdown();
   };

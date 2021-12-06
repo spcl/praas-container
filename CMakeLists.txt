@@ -33,29 +33,6 @@ endif()
 include(dependencies)
 
 ###
-# control plane
-###
-file(GLOB control_plane_files "system/control-plane/*.cpp")
-add_executable(control_plane ${control_plane_files})
-set_target_properties(control_plane PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin)
-add_dependencies(control_plane cxxopts::cxxopts)
-add_dependencies(control_plane sockpp-static)
-add_dependencies(control_plane spdlog::spdlog)
-target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
-target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
-target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
-target_include_directories(control_plane SYSTEM PRIVATE ${hiredis_SOURCE_DIR})
-target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:redis++::redis++,INTERFACE_INCLUDE_DIRECTORIES>)
-target_include_directories(control_plane SYSTEM PRIVATE ${threadpool_SOURCE_DIR})
-target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:stduuid,INTERFACE_INCLUDE_DIRECTORIES>)
-target_link_libraries(control_plane PRIVATE spdlog::spdlog)
-target_link_libraries(control_plane PRIVATE sockpp-static)
-target_link_libraries(control_plane PRIVATE redis++::redis++_static)
-target_link_libraries(control_plane PRIVATE stduuid)
-target_link_libraries(control_plane PRIVATE ${HIREDIS_LIB})
-#target_link_libraries(control_plane PRIVATE ${REDIS_PLUS_PLUS_LIB})
-
-###
 # Runtime library.
 ###
 file(GLOB runtime_library_files "runtime/lib/*.cpp")
@@ -72,6 +49,39 @@ target_link_libraries(runtime_library PRIVATE spdlog::spdlog)
 target_link_libraries(runtime_library PRIVATE sockpp-static)
 
 ###
+# Common system library.
+###
+file(GLOB common_library_files "system/common/*.cpp")
+add_library(common_library STATIC ${common_library_files})
+set_target_properties(common_library PROPERTIES RUNTIME_OUTPUT_DIRECTORY lib)
+
+###
+# control plane
+###
+file(GLOB control_plane_files "system/control-plane/*.cpp")
+add_executable(control_plane ${control_plane_files})
+set_target_properties(control_plane PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin)
+add_dependencies(control_plane cxxopts::cxxopts)
+add_dependencies(control_plane sockpp-static)
+add_dependencies(control_plane spdlog::spdlog)
+add_dependencies(control_plane common_library)
+target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(control_plane SYSTEM PRIVATE ${hiredis_SOURCE_DIR})
+target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:redis++::redis++,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(control_plane SYSTEM PRIVATE ${threadpool_SOURCE_DIR})
+target_include_directories(control_plane SYSTEM PRIVATE $<TARGET_PROPERTY:stduuid,INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(control_plane PRIVATE common_library)
+target_link_libraries(control_plane PRIVATE spdlog::spdlog)
+target_link_libraries(control_plane PRIVATE sockpp-static)
+target_link_libraries(control_plane PRIVATE redis++::redis++_static)
+target_link_libraries(control_plane PRIVATE stduuid)
+target_link_libraries(control_plane PRIVATE ${HIREDIS_LIB})
+#target_link_libraries(control_plane PRIVATE ${REDIS_PLUS_PLUS_LIB})
+
+
+###
 # Local Worker
 ###
 file(GLOB local_worker_files "system/local-worker/*.cpp")
@@ -81,10 +91,12 @@ add_dependencies(local_worker cxxopts::cxxopts)
 add_dependencies(local_worker sockpp-static)
 add_dependencies(local_worker spdlog::spdlog)
 add_dependencies(local_worker runtime_library)
+add_dependencies(local_worker common_library)
 target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(local_worker SYSTEM PRIVATE $<TARGET_PROPERTY:runtime_library,INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(local_worker PRIVATE common_library)
 target_link_libraries(local_worker PRIVATE spdlog::spdlog)
 target_link_libraries(local_worker PRIVATE sockpp-static)
 target_link_libraries(local_worker PRIVATE runtime_library)
