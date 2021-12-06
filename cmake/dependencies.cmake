@@ -23,7 +23,7 @@ find_package(sockpp QUIET)
 if(NOT sockpp_FOUND)
   message(STATUS "Downloading and building sockpp dependency")
   FetchContent_Declare(sockpp
-    GIT_REPOSITORY https://github.com/fpagliughi/sockpp
+    GIT_REPOSITORY https://github.com/spcl/sockpp
   )
   FetchContent_Populate(sockpp)
   FetchContent_MakeAvailable(sockpp)
