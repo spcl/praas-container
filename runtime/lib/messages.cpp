@@ -50,4 +50,24 @@ namespace praas::messages {
   {
     return RecvMessage::Type::SESSION_REQUEST;
   }
+
+  FunctionRequestMsg::FunctionRequestMsg(ssize_t payload_size):
+    buf_size(HEADER_LENGTH + payload_size),
+    buf(new int8_t[buf_size])
+  {}
+
+  std::string FunctionRequestMsg::function_id()
+  {
+    return std::string{reinterpret_cast<char*>(buf + 4), 16};
+  }
+
+  int32_t FunctionRequestMsg::payload()
+  {
+    return *reinterpret_cast<int32_t*>(buf);
+  }
+
+  ssize_t FunctionRequestMsg::size()
+  {
+    return buf_size;
+  }
 }

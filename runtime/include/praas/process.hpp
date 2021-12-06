@@ -24,7 +24,7 @@ namespace praas::process {
     bool _ending;
     int16_t _max_sessions;
     std::string _process_id;
-    std::vector<praas::session::Session> _sessions;
+    std::vector<praas::session::SessionFork> _sessions;
     // Connect to process to allocate sessions.
     sockpp::tcp_connector _control_plane_socket;
 

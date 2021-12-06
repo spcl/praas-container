@@ -49,6 +49,24 @@ target_link_libraries(runtime_library PRIVATE spdlog::spdlog)
 target_link_libraries(runtime_library PRIVATE sockpp-static)
 
 ###
+# Session exec
+###
+file(GLOB runtime_session_files "runtime/bin/*.cpp")
+add_executable(runtime_session ${runtime_session_files})
+set_target_properties(runtime_session PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin)
+add_dependencies(runtime_session cxxopts::cxxopts)
+add_dependencies(runtime_session sockpp-static)
+add_dependencies(runtime_session spdlog::spdlog)
+add_dependencies(runtime_session runtime_library)
+target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:runtime_library,INTERFACE_INCLUDE_DIRECTORIES>)
+target_link_libraries(runtime_session PRIVATE runtime_library)
+target_link_libraries(runtime_session PRIVATE spdlog::spdlog)
+target_link_libraries(runtime_session PRIVATE sockpp-static)
+
+###
 # Common system library.
 ###
 file(GLOB common_library_files "system/common/*.cpp")

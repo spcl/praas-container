@@ -99,7 +99,7 @@ namespace praas::process {
       // Verify conflicts - simple search
       auto it = std::find_if(
         _sessions.begin(), _sessions.end(),
-        [&msg](const praas::session::Session & s) {
+        [&msg](const praas::session::SessionFork & s) {
           return s.session_id == msg.session_id();
         }
       );
@@ -109,6 +109,7 @@ namespace praas::process {
       // Now we can start a session
       else {
         _sessions.emplace_back(msg.session_id(), msg.max_functions(), msg.memory_size());
+        _sessions.back().fork(_control_plane_socket.peer_address().to_string());
       }
     }
     return result;
@@ -119,7 +120,7 @@ namespace praas::process {
     spdlog::info("Shutdown process!");
     _ending = true;
     _control_plane_socket.shutdown(); 
-    for(praas::session::Session & session: _sessions)
+    for(praas::session::SessionFork & session: _sessions)
       session.shutdown();
   }
 
