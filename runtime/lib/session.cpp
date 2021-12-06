@@ -1,14 +1,15 @@
 
-#include "praas/messages.hpp"
+#include <charconv>
+#include <future>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <charconv>
 
 #include <spdlog/spdlog.h>
 #include <sockpp/tcp_connector.h>
 
 #include <praas/session.hpp>
+#include "praas/messages.hpp"
 
 namespace praas::session {
 
@@ -140,7 +141,15 @@ namespace praas::session {
         );
         return;
       }
+
+      // Parase the message
       std::unique_ptr<praas::messages::RecvMessage> ptr = msg.parse(bytes);
+
+      if(!ptr || ptr->type() != praas::messages::RecvMessage::Type::INVOCATION_REQUEST) {
+        spdlog::error("Unknown request");
+        continue;
+      }
+
       process_invocation(
         bytes,
         dynamic_cast<praas::messages::FunctionRequestMsg&>(*ptr.get()),
