@@ -6,6 +6,7 @@
 #include <string>
 
 #include <sockpp/tcp_connector.h>
+#include <thread_pool.hpp>
 
 #include <praas/buffer.hpp>
 
@@ -28,6 +29,7 @@ namespace praas::session {
   struct Session {
     //SharedMemory memory;
     praas::buffer::BufferQueue<int8_t> _buffers;
+    thread_pool _pool;
     int32_t max_functions;
     std::string session_id;
     bool ending;

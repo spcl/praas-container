@@ -45,6 +45,7 @@ target_include_directories(runtime_library PUBLIC "runtime/include")
 target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_library SYSTEM PUBLIC ${threadpool_SOURCE_DIR})
 target_link_libraries(runtime_library PRIVATE spdlog::spdlog)
 target_link_libraries(runtime_library PRIVATE sockpp-static)
 

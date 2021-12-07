@@ -1,4 +1,6 @@
 
+#include <spdlog/spdlog.h>
+
 #include <praas/function.hpp>
 
 namespace praas::function {
@@ -32,9 +34,20 @@ namespace praas::function {
     }
   }
 
+  void FunctionWorker::invoke(std::string fname, ssize_t bytes,
+    praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector * connection
+  )
+  {
+    spdlog::info("Invoking function {} with {} payload", fname, bytes);
+    spdlog::info("Invoked function {} with {} payload", fname, bytes);
+  }
+
+  std::unordered_map<std::thread::id, FunctionWorker*> FunctionWorkers::_workers;
+  FunctionsLibrary* FunctionWorkers::_library;
+
   void FunctionWorkers::init(FunctionsLibrary& library)
   {
-    FunctionWorkers::_library = library;
+    FunctionWorkers::_library = &library;
   }
 
   void FunctionWorkers::free()
@@ -49,7 +62,7 @@ namespace praas::function {
     if(it != _workers.end()) {
       return *(*it).second;
     } else {
-      FunctionWorker* ptr = new FunctionWorker(FunctionWorkers::_library);
+      FunctionWorker* ptr = new FunctionWorker(*FunctionWorkers::_library);
       _workers[thread_id] = ptr;
       return *ptr;
     }

@@ -7,6 +7,9 @@
 #include <thread>
 #include <unordered_map>
 
+#include <sockpp/tcp_connector.h>
+
+#include <praas/buffer.hpp>
 
 namespace praas::function {
 
@@ -27,11 +30,15 @@ namespace praas::function {
 
     FunctionWorker(FunctionsLibrary &);
     void resize(ssize_t size);
+    static void invoke(
+      std::string fname, ssize_t bytes,
+      praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector * connection
+    );
   };
 
   struct FunctionWorkers {
     static std::unordered_map<std::thread::id, FunctionWorker*> _workers;
-    static FunctionsLibrary& _library;
+    static FunctionsLibrary* _library;
 
     static void init(FunctionsLibrary&);
     static void free();

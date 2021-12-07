@@ -9,6 +9,7 @@
 
 #include <praas/session.hpp>
 #include <praas/messages.hpp>
+#include <praas/function.hpp>
 
 using praas::buffer::BufferQueue;
 
@@ -73,19 +74,12 @@ namespace praas::session {
   Session::Session(std::string session_id, int32_t max_functions, int32_t memory_size):
     // FIXME: parameters - should depend on max functions
     _buffers(10, 1024*1024),
+    _pool(max_functions),
     session_id(session_id),
     ending(false)
   {
     // FIXME: open shared memory
     // FIXME: max functions
-  }
-
-  void Session::process_invocation(
-    std::string fname, ssize_t bytes, praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector & connection
-  )
-  {
-    spdlog::info("Invoking function {} with {} payload", fname, bytes);
-    spdlog::info("Invoked function {} with {} payload", fname, bytes);
   }
 
   template <typename Dest, typename Source,  typename Deleter> 
@@ -168,11 +162,12 @@ namespace praas::session {
       spdlog::info("Function {}, received {} payload", msg->function_id(), payload_bytes);
 
       // Invoke function
-      process_invocation(
+      _pool.push_task(
+        praas::function::FunctionWorker::invoke,
         msg->function_id(),
         payload_bytes,
         buf,
-        connection
+        &connection
       );
     }
 
