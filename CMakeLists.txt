@@ -59,13 +59,16 @@ add_dependencies(runtime_session cxxopts::cxxopts)
 add_dependencies(runtime_session sockpp-static)
 add_dependencies(runtime_session spdlog::spdlog)
 add_dependencies(runtime_session runtime_library)
+add_dependencies(runtime_session tcpunch)
 target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:runtime_library,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:tcpunch,INTERFACE_INCLUDE_DIRECTORIES>)
 target_link_libraries(runtime_session PRIVATE runtime_library)
 target_link_libraries(runtime_session PRIVATE spdlog::spdlog)
 target_link_libraries(runtime_session PRIVATE sockpp-static)
+target_link_libraries(runtime_session PRIVATE tcpunch)
 
 ###
 # Common system library.

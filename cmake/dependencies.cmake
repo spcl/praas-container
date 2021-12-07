@@ -101,6 +101,20 @@ if(NOT stduuid_FOUND)
 endif()
 
 ###
+# tcpunch library
+###
+find_package(tcpunch QUIET)
+if(NOT tcpunch_FOUND)
+  message(STATUS "Downloading and building tcpunch dependency")
+  FetchContent_Declare(tcpunch
+    GIT_REPOSITORY  https://$ENV{GITHUB_ACCESS_TOKEN}@github.com/mcopik/TCPunch.git
+    GIT_TAG         main
+    SOURCE_SUBDIR   client
+  )
+  FetchContent_MakeAvailable(tcpunch)
+endif()
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})
