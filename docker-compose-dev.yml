@@ -7,11 +7,21 @@ services:
     expose:
       - "6379"
 
+  tcpunch:
+    image: spcleth/tcpunch:latest
+    # Needed to correctly handle signals
+    tty: true
+    init: true
+    expose:
+      - "10000"
+
   local_worker:
     image: praas/local_worker-dev
     # Needed to correctly handle signals
     tty: true
     init: true
+    depends_on:
+      - tcpunch
     expose:
       - "8080"
     volumes:
@@ -27,6 +37,7 @@ services:
     depends_on:
       - redis
       - local_worker
+      - tcpunch
     expose:
       - "8080"
     volumes:
