@@ -115,6 +115,24 @@ if(NOT tcpunch_FOUND)
 endif()
 
 ###
+# crow
+###
+find_package(Crow QUIET)
+if(NOT Crow_FOUND)
+  message(STATUS "Downloading and building crow dependency")
+  FetchContent_Declare(Crow
+    GIT_REPOSITORY  https://github.com/CrowCpp/Crow.git
+    #GIT_TAG         v0.3+3
+  )
+  FetchContent_Populate(Crow)
+  FetchContent_MakeAvailable(Crow)
+  set(CROW_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+  set(CROW_BUILD_TESTS  OFF CACHE INTERNAL "")
+  set(CROW_ENABLE_SSL ON CACHE INTERNAL "")
+  add_subdirectory(${crow_SOURCE_DIR} ${crow_BINARY_DIR})
+endif()
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})
