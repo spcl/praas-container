@@ -1,5 +1,5 @@
 
-#include <praas/function.hpp>>
+#include <praas/function.hpp>
 
 namespace praas::function {
 

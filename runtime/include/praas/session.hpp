@@ -7,6 +7,9 @@
 
 #include <sockpp/tcp_connector.h>
 
+#include <praas/sockets.hpp>
+#include <praas/buffer.hpp>
+
 namespace praas::messages {
   struct FunctionRequestMsg;
 }
@@ -25,6 +28,7 @@ namespace praas::session {
 
   struct Session {
     //SharedMemory memory;
+    praas::buffer::BufferQueue<int8_t> _buffers;
     int32_t max_functions;
     std::string session_id;
     bool ending;
@@ -34,7 +38,7 @@ namespace praas::session {
     void start(std::string control_plane_addr);
     void shutdown();
     void process_invocation(
-      ssize_t bytes, praas::messages::FunctionRequestMsg & msg, sockpp::tcp_connector & connection
+      std::string fname, ssize_t bytes, praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector & connection
     );
   };
 

@@ -1,15 +1,17 @@
 
+#include "praas/buffer.hpp"
 #include <charconv>
 #include <future>
 #include <sys/mman.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 #include <spdlog/spdlog.h>
 #include <sockpp/tcp_connector.h>
 
 #include <praas/session.hpp>
-#include "praas/messages.hpp"
+#include <praas/messages.hpp>
+#include <praas/sockets.hpp>
+
+using praas::buffer::BufferQueue;
 
 namespace praas::session {
 
@@ -70,6 +72,8 @@ namespace praas::session {
   }
 
   Session::Session(std::string session_id, int32_t max_functions, int32_t memory_size):
+    // FIXME: parameters - should depend on max functions
+    _buffers(10, 1024*1024),
     session_id(session_id),
     ending(false)
   {
@@ -78,16 +82,23 @@ namespace praas::session {
   }
 
   void Session::process_invocation(
-    ssize_t bytes, praas::messages::FunctionRequestMsg & msg, sockpp::tcp_connector & connection
+    std::string fname, ssize_t bytes, praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector & connection
   )
   {
-    std::string fname = msg.function_id();
-    spdlog::info("Invoking function {} with {} payload", fname, msg.payload());
-    // FIXME: function invocation
-    std::unique_ptr<int8_t[]> arr{new int8_t[msg.payload()]};
-    ssize_t payload_bytes = connection.read(arr.get(), msg.payload());
-    spdlog::info("Function {}, received {} payload", fname, payload_bytes);
-    spdlog::info("Invoked function {} with {} payload", fname, msg.payload());
+    spdlog::info("Invoking function {} with {} payload", fname, bytes);
+    spdlog::info("Invoked function {} with {} payload", fname, bytes);
+  }
+
+  template <typename Dest, typename Source,  typename Deleter> 
+  std::unique_ptr<Dest, Deleter> dynamic_cast_unique(std::unique_ptr<Source, Deleter> && ptr)
+  {
+    if (Dest* casted_ptr = dynamic_cast<Dest*>(ptr.get()))
+    {
+      std::unique_ptr<Dest, Deleter> result(casted_ptr, std::move(ptr.get_deleter()));
+      ptr.release();
+      return result;
+    }
+    return nullptr;
   }
 
   void Session::start(std::string control_plane_addr)
@@ -96,9 +107,9 @@ namespace praas::session {
     int port;
     // https://stackoverflow.com/questions/56634507/safely-convert-stdstring-view-to-int-like-stoi-or-atoi
     std::from_chars(port_str.data(), port_str.data() + port_str.size(), port);
-    sockpp::tcp_connector control_plane_connection;
+    sockpp::tcp_connector connection;
     try {
-      if(!control_plane_connection.connect(sockpp::inet_address(std::string{ip_address}, port))) {
+      if(!connection.connect(sockpp::inet_address(std::string{ip_address}, port))) {
         spdlog::error("Couldn't connect to control plane at {}.", control_plane_addr);
         return;
       }
@@ -112,50 +123,60 @@ namespace praas::session {
     {
       praas::messages::SendMessage msg;
       ssize_t bytes_size = msg.fill_session_identification(this->session_id);
-      control_plane_connection.write(msg.data, bytes_size);
+      connection.write(msg.data, bytes_size);
     }
 
-    // FIXME: Connect to control plane and data plane for invocations
     spdlog::info("Session {} begins work!", this->session_id);
 
     // FIXME: Read from data plane
-    // FIXME: ring buffer
     praas::messages::RecvMessageBuffer msg;
     while(!ending) {
-      ssize_t bytes = control_plane_connection.read(msg.data, msg.REQUEST_BUF_SIZE);
-      if(ending)
-        break;
-      // EOF
+
+      ssize_t bytes = connection.read(msg.data, msg.REQUEST_BUF_SIZE);
+
+      // EOF or incorrect read
       if(bytes == 0) {
         spdlog::debug(
           "End of file on connection with {}.",
-          control_plane_connection.peer_address().to_string()
+          connection.peer_address().to_string()
         );
-        return;
-      }
-      // Incorrect read
-      else if(bytes == -1) {
+        // FIXME: handle closure
+        break;
+      } else if(bytes == -1) {
         spdlog::debug(
           "Incorrect read on connection with {}.",
-          control_plane_connection.peer_address().to_string()
+          connection.peer_address().to_string()
         );
-        return;
+        continue;
       }
 
-      // Parase the message
+      // Parse the message
       std::unique_ptr<praas::messages::RecvMessage> ptr = msg.parse(bytes);
-
       if(!ptr || ptr->type() != praas::messages::RecvMessage::Type::INVOCATION_REQUEST) {
         spdlog::error("Unknown request");
         continue;
       }
+      auto msg = dynamic_cast_unique<praas::messages::FunctionRequestMsg>(std::move(ptr));
 
+      // Receive payload
+      auto buf = _buffers.retrieve_buffer(msg->payload());
+      if(buf.size == 0) {
+        spdlog::error("Not enough memory capacity to handle the invocation!");
+        // FIXME: notify client
+        continue;
+      }
+      ssize_t payload_bytes = connection.read(buf.val, msg->payload());
+      spdlog::info("Function {}, received {} payload", msg->function_id(), payload_bytes);
+
+      // Invoke function
       process_invocation(
-        bytes,
-        dynamic_cast<praas::messages::FunctionRequestMsg&>(*ptr.get()),
-        control_plane_connection
+        msg->function_id(),
+        payload_bytes,
+        buf,
+        connection
       );
     }
+
     spdlog::info("Session {} ends work!", this->session_id);
   }
 
@@ -164,4 +185,5 @@ namespace praas::session {
     // FIXME: catch signal, graceful quit
     ending = true;
   }
-};
+
+}
