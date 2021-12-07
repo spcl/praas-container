@@ -9,7 +9,6 @@
 
 #include <praas/session.hpp>
 #include <praas/messages.hpp>
-#include <praas/sockets.hpp>
 
 using praas::buffer::BufferQueue;
 

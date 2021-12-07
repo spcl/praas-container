@@ -7,7 +7,6 @@
 
 #include <sockpp/tcp_connector.h>
 
-#include <praas/sockets.hpp>
 #include <praas/buffer.hpp>
 
 namespace praas::messages {
