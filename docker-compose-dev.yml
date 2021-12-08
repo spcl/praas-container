@@ -40,12 +40,16 @@ services:
       - tcpunch
     expose:
       - "8080"
+      - "5050"
     volumes:
       - ./${DEV}:/dev-praas
+      - ./${SECRET_CERT}:/usr/local/etc/praas/server.pem:ro
+      - ./${SECRET_KEY}:/usr/local/etc/praas/server.key:ro
     environment:
       - REDIS_HOST=tcp://redis:6379
       - LOCAL_WORKER=local_worker:8080
       - IP_ADDRESS=control_plane
+      - HTTP_PORT=5050
 
   haproxy:
     image: haproxy:latest
@@ -53,7 +57,11 @@ services:
       - control_plane
     volumes:
       - ./deployment/conf/haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./${SECRET_CERT}:/usr/local/etc/praas/server.pem:ro
+      - ./${SECRET_KEY}:/usr/local/etc/praas/server.pem.key:ro
+      - ./${CLIENT_CERT}:/usr/local/etc/praas/client.pem:ro
     ports:
       - "8080:8080"
+      - "443:443"
 
 
