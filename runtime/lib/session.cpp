@@ -167,6 +167,10 @@ namespace praas::session {
       }
       auto msg = dynamic_cast_unique<praas::messages::FunctionRequestMsg>(std::move(ptr));
 
+      if(msg->payload() == 0) {
+        spdlog::info("No invocation from the control plane");
+      }
+
       // Receive payload
       auto buf = _buffers.retrieve_buffer(msg->payload());
       if(buf.size == 0) {
