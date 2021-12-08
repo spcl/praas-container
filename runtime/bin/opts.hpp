@@ -8,6 +8,7 @@ namespace praas::session {
 
   struct Options {
     std::string ip_address;
+    std::string hole_puncher_address;
     std::string session_id;
     std::string shared_memory;
     bool verbose;

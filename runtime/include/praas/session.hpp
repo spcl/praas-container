@@ -36,7 +36,7 @@ namespace praas::session {
 
     // FIXME: shared memory
     Session(std::string session_id, int32_t max_functions, int32_t memory_size);
-    void start(std::string control_plane_addr);
+    void start(std::string control_plane_addr, std::string hole_puncher_addr);
     void shutdown();
     void process_invocation(
       std::string fname, ssize_t bytes, praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector & connection
@@ -50,7 +50,7 @@ namespace praas::session {
 
     // FIXME: here we should have a fork of process with restricted permissions
     SessionFork(std::string session_id, int32_t max_functions, int32_t memory_size);
-    void fork(std::string controller_address);
+    void fork(std::string controller_address, std::string hole_puncher_address);
     void shutdown();
   };
 

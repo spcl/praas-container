@@ -13,17 +13,18 @@
 namespace praas::process {
  
   std::optional<Process> Process::create(
-    std::string process_id, std::string ip_address, int32_t port, int16_t max_sessions
+    std::string process_id, std::string ip_address, int32_t port,
+    std::string hole_puncher_addr, int16_t max_sessions
   )
   {
     try {
       sockpp::tcp_connector socket;
       if(socket.connect(sockpp::inet_address(ip_address, port))) {
         spdlog::debug(
-          "Succesful connection to {}:{} from {} on process {}",
+          "Succesful connection to control plane {}:{} from {} on process {}",
           ip_address, port, socket.address().to_string(), process_id
         );
-        return std::make_optional<Process>(process_id, std::move(socket), max_sessions);
+        return std::make_optional<Process>(process_id, hole_puncher_addr, std::move(socket), max_sessions);
       } else
         return std::optional<Process>();
     } catch (...) {
@@ -109,7 +110,7 @@ namespace praas::process {
       // Now we can start a session
       else {
         _sessions.emplace_back(msg.session_id(), msg.max_functions(), msg.memory_size());
-        _sessions.back().fork(_control_plane_socket.peer_address().to_string());
+        _sessions.back().fork(_control_plane_socket.peer_address().to_string(), _hole_puncher_address);
       }
     }
     return result;

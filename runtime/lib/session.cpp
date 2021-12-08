@@ -2,10 +2,13 @@
 #include "praas/buffer.hpp"
 #include <charconv>
 #include <future>
+#include <sockpp/inet_address.h>
+#include <sockpp/tcp_socket.h>
 #include <sys/mman.h>
 
 #include <spdlog/spdlog.h>
 #include <sockpp/tcp_connector.h>
+#include <tcpunch.h>
 
 #include <praas/session.hpp>
 #include <praas/messages.hpp>
@@ -45,13 +48,14 @@ namespace praas::session {
     child_pid(-1)
   {}
 
-  void SessionFork::fork(std::string controller_address)
+  void SessionFork::fork(std::string controller_address, std::string hole_puncher_address)
   {
     child_pid = vfork();
     if(child_pid == 0) {
       const char * argv[] = {
         "/dev-praas/bin/runtime_session",
-        "-a", controller_address.c_str(),
+        "--control-plane-addr", controller_address.c_str(),
+        "--hole-puncher-addr", hole_puncher_address.c_str(),
         "--session-id", session_id.c_str(),
         "--shared-memory", "FIXME",
         "-v", nullptr
@@ -94,7 +98,7 @@ namespace praas::session {
     return nullptr;
   }
 
-  void Session::start(std::string control_plane_addr)
+  void Session::start(std::string control_plane_addr, std::string hole_puncher_addr)
   {
     auto [ip_address, port_str] = split(control_plane_addr, ':');
     int port;
@@ -120,6 +124,18 @@ namespace praas::session {
     }
 
     spdlog::info("Session {} begins work!", this->session_id);
+
+    // Translate the address.
+    auto addr = sockpp::inet_address::resolve_name(hole_puncher_addr);
+    char addrstr[16];
+    inet_ntop(AF_INET, &addr, addrstr, 16);
+    spdlog::info("Attempt pairing on session {}, connect to resolved name {}", session_id, addrstr);
+    int sock_fd = pair(this->session_id.c_str(), addrstr);
+    sockpp::tcp_socket data_plane_socket(sock_fd);
+    spdlog::info(
+      "Session {} connected data plane to: {}",
+      this->session_id, data_plane_socket.peer_address().to_string()
+    );
 
     // FIXME: Read from data plane
     praas::messages::RecvMessageBuffer msg;

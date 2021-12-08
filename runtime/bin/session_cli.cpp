@@ -22,7 +22,7 @@ int main(int argc, char ** argv)
 
   // FIXME: parameters
   praas::session::Session server{opts.session_id, 1, 1};
-  server.start(opts.ip_address);
+  server.start(opts.ip_address, opts.hole_puncher_address);
 
   spdlog::info("Control plane is closing down");
   return 0;
