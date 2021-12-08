@@ -41,13 +41,16 @@ set_target_properties(runtime_library PROPERTIES RUNTIME_OUTPUT_DIRECTORY lib)
 add_dependencies(runtime_library cxxopts::cxxopts)
 add_dependencies(runtime_library sockpp-static)
 add_dependencies(runtime_library spdlog::spdlog)
+add_dependencies(runtime_library tcpunch)
 target_include_directories(runtime_library PUBLIC "runtime/include")
 target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:cxxopts::cxxopts,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(runtime_library SYSTEM PRIVATE $<TARGET_PROPERTY:tcpunch,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PUBLIC ${threadpool_SOURCE_DIR})
 target_link_libraries(runtime_library PRIVATE spdlog::spdlog)
 target_link_libraries(runtime_library PRIVATE sockpp-static)
+target_link_libraries(runtime_library PRIVATE tcpunch)
 
 ###
 # Session exec

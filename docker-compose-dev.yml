@@ -12,8 +12,8 @@ services:
     # Needed to correctly handle signals
     tty: true
     init: true
-    expose:
-      - "10000"
+    ports:
+      - "10000:10000"
 
   local_worker:
     image: praas/local_worker-dev
@@ -28,6 +28,7 @@ services:
       - ./${DEV}:/dev-praas
     environment:
       - NUMPROCS=1
+      - HOLEPUNCHER_ADDR=tcpunch
 
   control_plane:
     image: praas/control_plane-dev
