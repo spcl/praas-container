@@ -2,9 +2,9 @@
 #ifndef __RUNTIME_SESSION_HPP__
 #define __RUNTIME_SESSION_HPP__
 
-#include "praas/output.hpp"
 #include <cstdint>
 #include <string>
+#include <bitset>
 
 #include <sockpp/tcp_connector.h>
 #include <thread_pool.hpp>
@@ -50,26 +50,37 @@ namespace praas::session {
 
   struct Session {
     //SharedMemory memory;
-    praas::buffer::BufferQueue<int8_t> _buffers;
+    praas::buffer::BufferQueue<uint8_t> _buffers;
     thread_pool _pool;
     int32_t max_functions;
     std::string session_id;
     bool ending;
+    praas::function::FunctionsLibrary _library;
+    sockpp::tcp_socket _data_plane_socket;
 
     // FIXME: shared memory
     Session(std::string session_id, int32_t max_functions, int32_t memory_size);
+    ~Session();
     void start(std::string control_plane_addr, std::string hole_puncher_addr);
     void shutdown();
-    void process_invocation(
-      std::string fname, ssize_t bytes, praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector & connection
-    );
 
     template<typename InSocket>
     bool receive(
       InSocket && connection, praas::output::Channel & out_connection, praas::messages::RecvMessageBuffer & msg
     )
     {
-      ssize_t bytes = connection.read(msg.data, msg.REQUEST_BUF_SIZE);
+      spdlog::debug(
+        "Session {} polls for new invocations from {}",
+        session_id,
+        connection.peer_address().to_string()
+      );
+      ssize_t bytes = connection.read(msg.data, 22);
+      spdlog::debug(
+        "Session {} polled {} bytes of new invocations from {}",
+        bytes,
+        session_id,
+        connection.peer_address().to_string()
+      );
 
       // EOF or incorrect read
       if(bytes == 0) {
@@ -109,7 +120,7 @@ namespace praas::session {
         return true;
       }
       ssize_t payload_bytes = connection.read(buf.val, parsed_msg->payload());
-      spdlog::info("Function {}, received {} payload", parsed_msg->function_id(), payload_bytes);
+      spdlog::debug("Function {}, received {} payload", parsed_msg->function_id(), payload_bytes);
 
       // Invoke function
       _pool.push_task(

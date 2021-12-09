@@ -91,6 +91,11 @@ namespace praas::session {
     praas::function::FunctionWorkers::init(_library);
   }
 
+  Session::~Session()
+  {
+    praas::function::FunctionWorkers::free();
+  }
+
   void Session::start(std::string control_plane_addr, std::string hole_puncher_addr)
   {
     auto [ip_address, port_str] = split(control_plane_addr, ':');
@@ -124,31 +129,33 @@ namespace praas::session {
     inet_ntop(AF_INET, &addr, addrstr, 16);
     spdlog::info("Attempt pairing on session {}, connect to resolved name {}", session_id, addrstr);
     int sock_fd = pair(this->session_id.c_str(), addrstr);
-    sockpp::tcp_socket data_plane_socket(sock_fd);
+    _data_plane_socket = sockpp::tcp_socket{sock_fd};
     spdlog::info(
       "Session {} connected data plane to: {}",
-      this->session_id, data_plane_socket.peer_address().to_string()
+      this->session_id, _data_plane_socket.peer_address().to_string()
     );
 
     // Begin receiving from the control plane, and then switch to the data plane.
     praas::messages::RecvMessageBuffer msg;
-    praas::output::Channel output_channel{data_plane_socket};
+    praas::output::Channel output_channel{_data_plane_socket};
 
     receive(connection, output_channel, msg);
     while(!ending) {
-      if(!receive(data_plane_socket, output_channel, msg))
+      if(!receive(_data_plane_socket, output_channel, msg))
         break;
     }
 
     spdlog::info("Session {} ends work!", this->session_id);
+    // Wait for threads to finish before destroying memory
+    _pool.wait_for_tasks();
+    spdlog::info("Tasks finished on session {}", session_id);
   }
 
   void Session::shutdown()
   {
     // FIXME: catch signal, graceful quit
     ending = true;
-    spdlog::info("Closing down session {}", session_id);
-    praas::function::FunctionWorkers::free();
+    spdlog::info("Session is closed down!");
   }
 
 }
