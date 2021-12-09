@@ -1,15 +1,18 @@
 
-#include "praas/buffer.hpp"
 #include <charconv>
 #include <future>
+
+#include <sys/mman.h>
+#include <fcntl.h>
+
 #include <sockpp/inet_address.h>
 #include <sockpp/tcp_socket.h>
-#include <sys/mman.h>
-
 #include <sockpp/tcp_connector.h>
 #include <tcpunch.h>
 
 #include <praas/session.hpp>
+#include <praas/buffer.hpp>
+#include <praas/function.hpp>
 
 using praas::buffer::BufferQueue;
 
@@ -49,6 +52,10 @@ namespace praas::session {
   {
     child_pid = vfork();
     if(child_pid == 0) {
+      auto out_file = ("session_" + session_id);
+      int fd = open(out_file.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+      dup2(fd, 1);
+      dup2(fd, 2);
       const char * argv[] = {
         "/dev-praas/bin/runtime_session",
         "--control-plane-addr", controller_address.c_str(),
@@ -81,6 +88,7 @@ namespace praas::session {
   {
     // FIXME: open shared memory
     // FIXME: max functions
+    praas::function::FunctionWorkers::init(_library);
   }
 
   void Session::start(std::string control_plane_addr, std::string hole_puncher_addr)
@@ -139,6 +147,8 @@ namespace praas::session {
   {
     // FIXME: catch signal, graceful quit
     ending = true;
+    spdlog::info("Closing down session {}", session_id);
+    praas::function::FunctionWorkers::free();
   }
 
 }
