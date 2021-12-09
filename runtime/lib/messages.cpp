@@ -57,7 +57,10 @@ namespace praas::messages {
 
   std::string FunctionRequestMsg::function_id()
   {
-    return std::string{reinterpret_cast<char*>(buf + 4), 16};
+    // Avoid direct string construction in case network payload is not a valid null-terminated string
+    // strnlen is in POSIX. strnlen_s in C11 but not in C++17
+    size_t len = strnlen(reinterpret_cast<char*>(buf + 4), 16);
+    return std::string{reinterpret_cast<char*>(buf + 4), len};
   }
 
   int32_t FunctionRequestMsg::payload()
