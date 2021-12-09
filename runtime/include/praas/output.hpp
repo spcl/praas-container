@@ -32,53 +32,56 @@ namespace praas::output {
       socket(socket)
     {}
 
-    void send(char* payload, int payload_size)
+    bool send(char* payload, int payload_size)
     {
       char header[HEADER_SIZE];
       *reinterpret_cast<int16_t*>(header) = static_cast<int16_t>(Status::PAYLOAD);
       *reinterpret_cast<int16_t*>(header+2) = -1;
       *reinterpret_cast<int32_t*>(header+4) = payload_size;
-      ssize_t bytes = socket.write(header, HEADER_SIZE);
+      ssize_t bytes = ::send(socket.handle(), header, HEADER_SIZE, MSG_NOSIGNAL);
       if(bytes == -1)  {
         spdlog::error("Sending payload header failed! Reason: {}", strerror(errno));
-        return;
+        return false;
       }
-      bytes = socket.write(payload, payload_size);
+      bytes = ::send(socket.handle(), payload, payload_size, MSG_NOSIGNAL);
       if(bytes == -1)  {
         spdlog::error("Sending payload failed! Reason: {}", strerror(errno));
-        return;
+        return false;
       } else {
         spdlog::debug("Sent {} bytes of payload!", payload_size);
+        return true;
       }
     }
 
-    void mark_end(int return_code)
+    bool mark_end(int return_code)
     {
       char header[HEADER_SIZE];
       *reinterpret_cast<int16_t*>(header) = static_cast<int16_t>(Status::PAYLOAD);
       *reinterpret_cast<int16_t*>(header+2) = return_code;
       *reinterpret_cast<int32_t*>(header+4) = 0;
-      ssize_t bytes = socket.write(header, HEADER_SIZE);
+      ssize_t bytes = ::send(socket.handle(), header, HEADER_SIZE, MSG_NOSIGNAL);
       if(bytes == -1)  {
         spdlog::error("Sending end mark failed! Reason: {}", strerror(errno));
-        return;
+        return false;
       } else {
         spdlog::debug("Sent end mark!");
+        return true;
       }
     }
 
-    void send_error(Status status)
+    bool send_error(Status status)
     {
       char header[HEADER_SIZE];
       *reinterpret_cast<int16_t*>(header) = static_cast<int16_t>(status);
       *reinterpret_cast<int16_t*>(header+2) = -1;
       *reinterpret_cast<int32_t*>(header+4) = 0;
-      ssize_t bytes = socket.write(header, HEADER_SIZE);
+      ssize_t bytes = ::send(socket.handle(), header, HEADER_SIZE, MSG_NOSIGNAL);
       if(bytes == -1)  {
         spdlog::error("Error notification failed! Reason: {}", strerror(errno));
-        return;
+        return false;
       } else {
         spdlog::debug("Sent error!");
+        return true;
       }
     }
   };
