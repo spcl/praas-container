@@ -1,4 +1,7 @@
-# praas-container
+# PraaS Container
+
+This repository holds PraaS container runtime and system components.
+In future versions, we're going to split the system components into a separate repositoryt .
 
 # Installations
 
