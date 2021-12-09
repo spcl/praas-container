@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "example": {
+      "library":  "libexample.so",
+      "function": "example"
+    },
+    "example2": {
+      "library":  "libexample.so",
+      "function": "example2"
+    }
+  }
+}

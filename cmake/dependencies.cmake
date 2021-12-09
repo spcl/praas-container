@@ -133,6 +133,23 @@ if(NOT Crow_FOUND)
 endif()
 
 ###
+# cJSON
+###
+find_package(cJSON QUIET)
+if(NOT cJSON_FOUND)
+  message(STATUS "Downloading and building cJSON dependency")
+  FetchContent_Declare(cJSON
+    GIT_REPOSITORY  https://github.com/DaveGamble/cJSON
+  )
+  FetchContent_Populate(cJSON)
+  set(ENABLE_CJSON_TEST OFF CACHE INTERNAL "")
+  set(CJSON_BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+  set(BUILD_SHARED_AND_STATIC_LIBS ON CACHE INTERNAL "")
+  FetchContent_MakeAvailable(cJSON)
+  add_subdirectory(${cjson_SOURCE_DIR} ${cjson_BINARY_DIR})
+endif()
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})
