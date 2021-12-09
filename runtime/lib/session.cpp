@@ -6,13 +6,10 @@
 #include <sockpp/tcp_socket.h>
 #include <sys/mman.h>
 
-#include <spdlog/spdlog.h>
 #include <sockpp/tcp_connector.h>
 #include <tcpunch.h>
 
 #include <praas/session.hpp>
-#include <praas/messages.hpp>
-#include <praas/function.hpp>
 
 using praas::buffer::BufferQueue;
 
@@ -86,18 +83,6 @@ namespace praas::session {
     // FIXME: max functions
   }
 
-  template <typename Dest, typename Source,  typename Deleter> 
-  std::unique_ptr<Dest, Deleter> dynamic_cast_unique(std::unique_ptr<Source, Deleter> && ptr)
-  {
-    if (Dest* casted_ptr = dynamic_cast<Dest*>(ptr.get()))
-    {
-      std::unique_ptr<Dest, Deleter> result(casted_ptr, std::move(ptr.get_deleter()));
-      ptr.release();
-      return result;
-    }
-    return nullptr;
-  }
-
   void Session::start(std::string control_plane_addr, std::string hole_puncher_addr)
   {
     auto [ip_address, port_str] = split(control_plane_addr, ':');
@@ -137,58 +122,14 @@ namespace praas::session {
       this->session_id, data_plane_socket.peer_address().to_string()
     );
 
-    // FIXME: Read from data plane
+    // Begin receiving from the control plane, and then switch to the data plane.
     praas::messages::RecvMessageBuffer msg;
+    praas::output::Channel output_channel{data_plane_socket};
+
+    receive(connection, output_channel, msg);
     while(!ending) {
-
-      ssize_t bytes = connection.read(msg.data, msg.REQUEST_BUF_SIZE);
-
-      // EOF or incorrect read
-      if(bytes == 0) {
-        spdlog::debug(
-          "End of file on connection with {}.",
-          connection.peer_address().to_string()
-        );
-        // FIXME: handle closure
+      if(!receive(data_plane_socket, output_channel, msg))
         break;
-      } else if(bytes == -1) {
-        spdlog::debug(
-          "Incorrect read on connection with {}.",
-          connection.peer_address().to_string()
-        );
-        continue;
-      }
-
-      // Parse the message
-      std::unique_ptr<praas::messages::RecvMessage> ptr = msg.parse(bytes);
-      if(!ptr || ptr->type() != praas::messages::RecvMessage::Type::INVOCATION_REQUEST) {
-        spdlog::error("Unknown request");
-        continue;
-      }
-      auto msg = dynamic_cast_unique<praas::messages::FunctionRequestMsg>(std::move(ptr));
-
-      if(msg->payload() == 0) {
-        spdlog::info("No invocation from the control plane");
-      }
-
-      // Receive payload
-      auto buf = _buffers.retrieve_buffer(msg->payload());
-      if(buf.size == 0) {
-        spdlog::error("Not enough memory capacity to handle the invocation!");
-        // FIXME: notify client
-        continue;
-      }
-      ssize_t payload_bytes = connection.read(buf.val, msg->payload());
-      spdlog::info("Function {}, received {} payload", msg->function_id(), payload_bytes);
-
-      // Invoke function
-      _pool.push_task(
-        praas::function::FunctionWorker::invoke,
-        msg->function_id(),
-        payload_bytes,
-        buf,
-        &connection
-      );
     }
 
     spdlog::info("Session {} ends work!", this->session_id);

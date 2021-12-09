@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 
 #include <praas/function.hpp>
+#include <praas/output.hpp>
 
 namespace praas::function {
 
@@ -23,22 +24,25 @@ namespace praas::function {
   FunctionWorker::FunctionWorker(FunctionsLibrary & library):
     _library(library)
   {
-    resize(DEFAULT_BUFFER_SIZE);
+    //resize(DEFAULT_BUFFER_SIZE);
   }
 
-  void FunctionWorker::resize(ssize_t size)
-  {
-    if(payload_buffer_len < size || !payload_buffer) {
-      payload_buffer_len = size;
-      payload_buffer.reset(new int8_t[payload_buffer_len]);
-    }
-  }
+  //void FunctionWorker::resize(ssize_t size)
+  //{
+  //  if(payload_buffer_len < size || !payload_buffer) {
+  //    payload_buffer_len = size;
+  //    payload_buffer.reset(new int8_t[payload_buffer_len]);
+  //  }
+  //}
 
   void FunctionWorker::invoke(std::string fname, ssize_t bytes,
-    praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector * connection
+    praas::buffer::Buffer<int8_t> buf, praas::output::Channel* channel
   )
   {
     spdlog::info("Invoking function {} with {} payload", fname, bytes);
+    char c = 1;
+    // FIXME: replace with user output
+    channel->send(&c, 1, 0);
     spdlog::info("Invoked function {} with {} payload", fname, bytes);
   }
 

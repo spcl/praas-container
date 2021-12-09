@@ -11,6 +11,10 @@
 
 #include <praas/buffer.hpp>
 
+namespace praas::output {
+  struct Channel;
+}
+
 namespace praas::function {
 
   struct FunctionsLibrary {
@@ -24,15 +28,13 @@ namespace praas::function {
 
   struct FunctionWorker {
     static constexpr int DEFAULT_BUFFER_SIZE = 1024 * 1024;
-    std::unique_ptr<int8_t[]> payload_buffer;
-    ssize_t payload_buffer_len;
     FunctionsLibrary& _library;
 
     FunctionWorker(FunctionsLibrary &);
-    void resize(ssize_t size);
+    //void resize(ssize_t size);
     static void invoke(
       std::string fname, ssize_t bytes,
-      praas::buffer::Buffer<int8_t> buf, sockpp::tcp_connector * connection
+      praas::buffer::Buffer<int8_t> buf, praas::output::Channel* connection
     );
   };
 
