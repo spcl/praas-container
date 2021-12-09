@@ -13,7 +13,7 @@
 
 void handler(int signum)
 {
-
+  fprintf(stderr, "Unfortunately, the session has crashed - signal %d.\n", signum);
   void *array[10];
   size_t size;
   // get void*'s for all entries on the stack
@@ -43,6 +43,7 @@ int main(int argc, char ** argv)
 
   sigaction(SIGSEGV, &sa, NULL);
   sigaction(SIGTERM, &sa, NULL);
+  sigaction(SIGPIPE, &sa, NULL);
 
   // FIXME: parameters
   praas::session::Session server{opts.session_id, 1, 1};
