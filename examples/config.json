@@ -7,6 +7,10 @@
     "example2": {
       "library":  "libexample.so",
       "function": "example2"
+    },
+    "shm_example": {
+      "library":  "libexample.so",
+      "function": "shm_example"
     }
   }
 }
