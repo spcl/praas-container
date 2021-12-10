@@ -4,8 +4,55 @@
 
 #include <memory>
 #include <string>
+#include <cstring>
 
 namespace praas::messages {
+
+  struct FunctionMessage
+  {
+    // Header
+    // 2 bytes magic number
+    // 2 bytes flag - -1 if not final; otherwise return code from user
+    // 4 bytes payload size
+    // Total 8 bytes
+    //
+    // Interpretation
+    // a) number = 0, flag != -1 -> final message, flag is return code of the function
+    // b) number = 0, flag == -1 -> upcoming return data, payload size describe data size
+    // c) number > 0 -> error message, number encodes the error from system
+
+    // Magic number
+    enum class Status: int16_t {
+      PAYLOAD = 0,
+      UNKNOWN_REQUEST = 1,
+      OUT_OF_MEMORY = 2,
+      UNKNOWN_FUNCTION = 3
+    };
+
+    static constexpr uint16_t BUF_SIZE = 8;
+    int8_t data[BUF_SIZE];
+
+    void fill_payload(int32_t size)
+    {
+      *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(Status::PAYLOAD);
+      *reinterpret_cast<int16_t*>(data+2) = -1;
+      *reinterpret_cast<int32_t*>(data+4) = size;
+    }
+
+    void fill_error(FunctionMessage::Status status)
+    {
+      *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(status);
+      *reinterpret_cast<int16_t*>(data+2) = -1;
+      *reinterpret_cast<int32_t*>(data+4) = 0;
+    }
+
+    void fill_end(int16_t return_code)
+    {
+      *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(Status::PAYLOAD);
+      *reinterpret_cast<int16_t*>(data+2) = return_code;
+      *reinterpret_cast<int32_t*>(data+4) = 0;
+    }
+  };
 
   struct SendMessage
   {
@@ -56,8 +103,13 @@ namespace praas::messages {
     // 16 bytes of function id
     // 22 bytes
 
-    static constexpr uint16_t REQUEST_BUF_SIZE = 26;
+    static constexpr uint16_t REQUEST_BUF_SIZE = 128;
     int8_t data[REQUEST_BUF_SIZE];
+
+    RecvMessageBuffer()
+    {
+      memset(data, REQUEST_BUF_SIZE, 0);
+    }
 
     std::unique_ptr<RecvMessage> parse(ssize_t);
   };
