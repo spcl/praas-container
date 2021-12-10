@@ -150,6 +150,23 @@ if(NOT cJSON_FOUND)
 endif()
 
 ###
+# AWS SDK - just the S3 part.
+###
+find_package(AWSSDK COMPONENTS s3 QUIET)
+if(NOT AWSSDK_FOUND)
+  message(STATUS "Downloading and building AWS SDK dependency")
+  FetchContent_Declare(awsSDK
+    GIT_REPOSITORY  https://github.com/aws/aws-sdk-cpp
+  )
+  FetchContent_Populate(awsSDK)
+  set(BUILD_ONLY "s3" CACHE INTERNAL "")
+  set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+  set(ENABLE_TESTING OFF CACHE INTERNAL "")
+  FetchContent_MakeAvailable(awsSDK)
+  add_subdirectory(${awssdk_SOURCE_DIR} ${awssdk_BINARY_DIR})
+endif()
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})
