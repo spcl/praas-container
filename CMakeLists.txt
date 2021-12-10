@@ -32,6 +32,9 @@ endif()
 ###
 include(dependencies)
 
+
+add_compile_options(-Wall -Wextra -pedantic -Werror)
+
 ###
 # Runtime library.
 ###
@@ -48,16 +51,16 @@ target_include_directories(runtime_library SYSTEM PUBLIC $<TARGET_PROPERTY:cxxop
 target_include_directories(runtime_library SYSTEM PUBLIC $<TARGET_PROPERTY:spdlog::spdlog,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PUBLIC $<TARGET_PROPERTY:sockpp-static,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PUBLIC $<TARGET_PROPERTY:tcpunch,INTERFACE_INCLUDE_DIRECTORIES>)
-#target_include_directories(runtime_library SYSTEM PUBLIC $<TARGET_PROPERTY:cjson,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PUBLIC ${cjson_SOURCE_DIR})
 target_include_directories(runtime_library SYSTEM PUBLIC ${threadpool_SOURCE_DIR})
 target_include_directories(runtime_library SYSTEM PUBLIC $<TARGET_PROPERTY:aws-cpp-sdk-core,INTERFACE_INCLUDE_DIRECTORIES>)
 target_include_directories(runtime_library SYSTEM PUBLIC $<TARGET_PROPERTY:aws-cpp-sdk-s3,INTERFACE_INCLUDE_DIRECTORIES>)
+# Header only Boost.interprocess
+target_include_directories(runtime_library SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(runtime_library PUBLIC spdlog::spdlog)
 target_link_libraries(runtime_library PUBLIC sockpp-static)
 target_link_libraries(runtime_library PUBLIC tcpunch)
 target_link_libraries(runtime_library PUBLIC cjson-static)
-#target_link_libraries(runtime_library PUBLIC ${AWSSDK_LINK_LIBRARIES})
 target_link_libraries(runtime_library PUBLIC aws-cpp-sdk-s3 aws-cpp-sdk-core)
 target_link_libraries(runtime_library PUBLIC dl)
 target_link_libraries(runtime_library PUBLIC rt)

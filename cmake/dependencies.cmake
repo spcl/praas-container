@@ -167,6 +167,11 @@ if(NOT AWSSDK_FOUND)
 endif()
 
 ###
+# Boost interprocess - we use it for stream buffer.
+###
+find_package(Boost REQUIRED)
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})
