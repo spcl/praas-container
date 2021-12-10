@@ -102,7 +102,7 @@ namespace praas::session {
       std::unique_ptr<praas::messages::RecvMessage> ptr = msg.parse(bytes);
       if(!ptr || ptr->type() != praas::messages::RecvMessage::Type::INVOCATION_REQUEST) {
         spdlog::error("Unknown request");
-        out_connection.send_error(praas::output::Channel::Status::UNKNOWN_REQUEST);
+        out_connection.send_error(praas::messages::FunctionMessage::Status::UNKNOWN_REQUEST);
         return true;
       }
       auto parsed_msg = dynamic_cast_unique<praas::messages::FunctionRequestMsg>(std::move(ptr));
@@ -116,7 +116,7 @@ namespace praas::session {
       auto buf = _buffers.retrieve_buffer(parsed_msg->payload());
       if(buf.size == 0) {
         spdlog::error("Not enough memory capacity to handle the invocation!");
-        out_connection.send_error(praas::output::Channel::Status::OUT_OF_MEMORY);
+        out_connection.send_error(praas::messages::FunctionMessage::Status::OUT_OF_MEMORY);
         return true;
       }
       ssize_t payload_bytes = connection.read(buf.val, parsed_msg->payload());
