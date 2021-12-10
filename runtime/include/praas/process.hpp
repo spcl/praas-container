@@ -2,7 +2,6 @@
 #ifndef __RUNTIME_PROCESS_HPP__
 #define __RUNTIME_PROCESS_HPP__
 
-#include "praas/messages.hpp"
 #include <cstdint>
 #include <vector>
 #include <optional>
@@ -19,6 +18,9 @@ namespace praas::process {
     SESSION_CONFLICT = 2,
     UNKNOWN_FAILURE
   };
+
+  // This works because we have only a single instance of this class in a single process.
+  void session_shutdown_handler(int signo, siginfo_t *si, void *ucontext);
 
   struct Process {
     bool _ending;
@@ -39,6 +41,16 @@ namespace praas::process {
       _hole_puncher_address(hole_puncher_address)
     {
       _control_plane_socket = std::move(socket); 
+      _instance = this;
+
+      struct sigaction sa;
+      memset(&sa, 0, sizeof(struct sigaction));
+      sigemptyset(&sa.sa_mask);
+      sa.sa_sigaction = session_shutdown_handler;
+      // Tell the kernel to restart interrupted system calls on SIGCHLD.
+      // We don't want to complicate socket handling because of a session shutdown.
+      sa.sa_flags   = SA_SIGINFO | SA_RESTART;
+      sigaction(SIGCHLD, &sa, NULL);
     }
 
     Process(Process && p) noexcept
@@ -74,6 +86,9 @@ namespace praas::process {
     void start();
     void shutdown();
     ErrorCode allocate_session(praas::messages::SessionRequestMsg&);
+
+    static Process* _instance;
+    static Process* get_instance();
   };
 
 };

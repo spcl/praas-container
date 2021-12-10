@@ -34,7 +34,6 @@ int main(int argc, char ** argv)
   spdlog::set_pattern("[%H:%M:%S:%f] [P %P] [T %t] [%l] %v ");
   spdlog::info("Executing PraaS session executor!");
 
-
   struct sigaction sa;
   memset(&sa, 0, sizeof(struct sigaction));
   sigemptyset(&sa.sa_mask);

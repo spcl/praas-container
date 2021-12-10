@@ -11,7 +11,20 @@
 #include <praas/messages.hpp>
 
 namespace praas::process {
+
+  Process* Process::_instance = nullptr;
  
+  Process* Process::get_instance()
+  {
+    return _instance;
+  }
+
+  void session_shutdown_handler(int signo, siginfo_t *si, void *ucontext)
+  {
+    // FIXME: handle session swapping
+    spdlog::debug("A session shutdown on PID {}", si->si_pid);
+  }
+
   std::optional<Process> Process::create(
     std::string process_id, std::string ip_address, int32_t port,
     std::string hole_puncher_addr, int16_t max_sessions
