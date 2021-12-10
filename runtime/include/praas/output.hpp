@@ -19,7 +19,7 @@ namespace praas::output {
       socket(socket)
     {}
 
-    bool send(char* payload, int payload_size, const std::string & function_id)
+    bool send(const char* payload, int payload_size, const std::string & function_id)
     {
       praas::messages::FunctionMessage msg;
       msg.fill_payload(payload_size, function_id);
@@ -64,7 +64,7 @@ namespace praas::output {
         spdlog::error("Error notification failed! Reason: {}", strerror(errno));
         return false;
       } else {
-        spdlog::debug("Sent error on id {}!", function_id);
+        spdlog::debug("Sent error {} on id {}!", static_cast<int16_t>(status), function_id);
         return true;
       }
     }

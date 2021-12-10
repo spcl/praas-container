@@ -15,6 +15,10 @@ namespace praas::output {
   struct Channel;
 }
 
+namespace praas::session {
+  struct SharedMemory;
+}
+
 namespace praas::function {
 
   struct FunctionsLibrary {
@@ -22,7 +26,7 @@ namespace praas::function {
     std::unordered_map<std::string, void*> _functions;
     static constexpr char DEFAULT_CODE_LOCATION[] = "/code";
     static constexpr char DEFAULT_USER_CONFIG_LOCATION[] = "config.json";
-    typedef int (*FuncType)(uint8_t*, uint32_t, const std::string&, praas::output::Channel*);
+    typedef int (*FuncType)(uint8_t*, uint32_t, uint8_t*, uint32_t, const std::string&, praas::output::Channel*);
 
     FunctionsLibrary();
     ~FunctionsLibrary();
@@ -34,14 +38,22 @@ namespace praas::function {
     FunctionsLibrary& _library;
 
     FunctionWorker(FunctionsLibrary &);
+
+    //
+    // Copy and move the arguments that might not live longer than the function invoking threads.
+    // Shared memory and output channels should live until session closess.
     static void invoke(
-      std::string fname, std::string function_id, ssize_t bytes,
-      praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* connection
+      std::string fname, std::string function_id,
+      ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
+      const praas::session::SharedMemory* shm,
+      praas::output::Channel* connection
     );
   private:
     void _invoke(
-      const std::string& fname, const std::string& function_id, ssize_t bytes,
-      praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* connection
+      const std::string& fname, const std::string& function_id,
+      ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
+      const praas::session::SharedMemory* shm,
+      praas::output::Channel* connection
     );
   };
 

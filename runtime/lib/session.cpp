@@ -13,6 +13,7 @@
 #include <praas/session.hpp>
 #include <praas/buffer.hpp>
 #include <praas/function.hpp>
+#include <utility>
 
 using praas::buffer::BufferQueue;
 
@@ -30,26 +31,115 @@ namespace praas::session {
       );
   }
 
-  SharedMemory::SharedMemory(int32_t size):
-    size(size)
+  SharedMemory::SharedMemory(const std::string& path, int file_descriptor, int32_t size, void* ptr):
+    _path(path),
+    _size(size),
+    _fd(file_descriptor),
+    _ptr(ptr)
+  {}
+
+  SharedMemory::SharedMemory(SharedMemory && obj)
   {
-    // Shared between processes?
-    _ptr = mmap(nullptr, size * 1024, PROT_WRITE, MAP_SHARED, 0, 0);
+    this->_size = std::move(obj._size);
+    this->_fd = std::move(obj._fd);
+    this->_path = std::move(obj._path);
+    this->_ptr = std::move(obj._ptr);
+
+    obj._size = -1;
+    obj._fd = -1;
+    obj._path = "";
+    obj._ptr = nullptr;
+  }
+
+  SharedMemory& SharedMemory::operator=(SharedMemory && obj)
+  {
+    this->_size = std::move(obj._size);
+    this->_fd = std::move(obj._fd);
+    this->_path = std::move(obj._path);
+    this->_ptr = std::move(obj._ptr);
+
+    obj._size = -1;
+    obj._fd = -1;
+    obj._path = "";
+    obj._ptr = nullptr;
+
+    return *this;
   }
 
   SharedMemory::~SharedMemory()
   {
-    munmap(_ptr, size);
+    if(_ptr) {
+      if(munmap(_ptr, _size) == -1) {
+        spdlog::error("Failed to unmap shared memory!");
+      }
+    }
+    if(_fd != -1) {
+      if(shm_unlink(_path.c_str()) == -1) {
+        spdlog::error("Failed to unlink shared memory!");
+      }
+    }
+  }
+
+  std::optional<SharedMemory> SharedMemory::create(std::string session_id, int32_t size)
+  {
+    session_id.insert(0, "/");
+    int fd = shm_open(session_id.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if(fd == -1) {
+      spdlog::error(
+        "Couldn't allocate shared memory at {}! Reason: {}",
+        session_id,
+        strerror(errno)
+      );
+      return std::optional<SharedMemory>{};
+    }
+
+    if(ftruncate(fd, size * 1024) == -1) {
+      spdlog::error("Couldn't resize shared memory!");
+      return std::optional<SharedMemory>{};
+    }
+
+    spdlog::debug("Created {} kbytes of shared memory at {} {}", size, session_id, session_id.length());
+    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size};
+  }
+
+  std::optional<SharedMemory> SharedMemory::open(std::string session_id, int32_t size)
+  {
+    session_id.insert(0, "/");
+    int fd = shm_open(session_id.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
+    if(fd == -1) {
+      spdlog::error(
+        "Couldn't open shared memory at {}! Reason: {}",
+        session_id,
+        strerror(errno)
+      );
+      return std::optional<SharedMemory>{};
+    }
+
+    void* ptr = mmap(NULL, size * 1024, PROT_WRITE, MAP_SHARED, fd, 0);
+    if(ptr == MAP_FAILED) {
+      spdlog::error("Failed to map shared memory");
+      return std::optional<SharedMemory>{};
+    }
+
+    spdlog::debug("Opened {} kbytes of shared memory at {}", size, session_id);
+    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size, ptr};
   }
 
   SessionFork::SessionFork(std::string session_id, int32_t max_functions, int32_t memory_size):
-    memory(memory_size),
     session_id(session_id),
+    memory_size(memory_size),
     child_pid(-1)
   {}
 
-  void SessionFork::fork(std::string controller_address, std::string hole_puncher_address)
+  bool SessionFork::fork(std::string controller_address, std::string hole_puncher_address)
   {
+    std::optional<SharedMemory> shm = SharedMemory::create(session_id, memory_size);
+    if(!shm.has_value()) {
+      spdlog::error("Couldn't fork process - no shared memory!");
+      return false;
+    }
+
+    // FIXME: here we should have a fork of process with restricted permissions
     child_pid = vfork();
     if(child_pid == 0) {
       auto out_file = ("session_" + session_id);
@@ -71,7 +161,11 @@ namespace praas::session {
       }
     } else {
       spdlog::debug("Launched session executor for session {}, PID {}", session_id, child_pid);
+      this->memory = std::move(shm.value());
+      return true;
     }
+    // Avoid compiler errors
+    return true;
   }
 
   void SessionFork::shutdown()
@@ -83,6 +177,7 @@ namespace praas::session {
     // FIXME: parameters - should depend on max functions
     _buffers(10, 1024*1024),
     _pool(max_functions),
+    _memory_size(memory_size),
     session_id(session_id),
     ending(false)
   {
@@ -98,6 +193,14 @@ namespace praas::session {
 
   void Session::start(std::string control_plane_addr, std::string hole_puncher_addr)
   {
+    // Allocate
+    std::optional<SharedMemory> shm = SharedMemory::open(session_id, _memory_size);
+    if(!shm.has_value()) {
+      spdlog::error("Couldn't open shared memory!");
+      return;
+    }
+    this->_shm = std::move(shm.value());
+
     auto [ip_address, port_str] = split(control_plane_addr, ':');
     int port;
     // https://stackoverflow.com/questions/56634507/safely-convert-stdstring-view-to-int-like-stoi-or-atoi

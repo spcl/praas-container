@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <string>
+#include <optional>
 
 #include <sockpp/tcp_connector.h>
 #include <thread_pool.hpp>
@@ -39,25 +40,50 @@ namespace praas::session {
 
   struct SharedMemory {
     // memory block size
-    int32_t size;
+    int32_t _size;
+    // file descriptor
+    int _fd;
+    // path to shared memory object
+    std::string _path;
     // memory block
     void* _ptr;
 
-    SharedMemory(int32_t size);
+    SharedMemory():
+      _size(-1),
+      _fd(-1),
+      _path(""),
+      _ptr(nullptr)
+    {}
+    SharedMemory(const std::string& path, int file_descriptor, int32_t size, void* ptr = nullptr);
+    SharedMemory(SharedMemory &&);
+    SharedMemory& operator=(SharedMemory && obj);
     ~SharedMemory();
+
+    void* ptr() const
+    {
+      return _ptr;
+    }
+
+    int32_t size() const
+    {
+      return _size;
+    }
+
+    static std::optional<SharedMemory> create(std::string session_id, int32_t size);
+    static std::optional<SharedMemory> open(std::string session_id, int32_t size);
   };
 
   struct Session {
-    //SharedMemory memory;
+    SharedMemory _shm;
     praas::buffer::BufferQueue<uint8_t> _buffers;
     thread_pool _pool;
+    int32_t _memory_size;
     int32_t max_functions;
     std::string session_id;
     bool ending;
     praas::function::FunctionsLibrary _library;
     sockpp::tcp_socket _data_plane_socket;
 
-    // FIXME: shared memory
     Session(std::string session_id, int32_t max_functions, int32_t memory_size);
     ~Session();
     void start(std::string control_plane_addr, std::string hole_puncher_addr);
@@ -139,6 +165,8 @@ namespace praas::session {
         parsed_msg->function_id(),
         payload_bytes,
         buf,
+        // Pass pointer to avoid copying
+        &this->_shm,
         &out_connection
       );
       return true;
@@ -148,11 +176,11 @@ namespace praas::session {
   struct SessionFork {
     SharedMemory memory;
     std::string session_id;
+    int32_t memory_size;
     pid_t child_pid;
 
-    // FIXME: here we should have a fork of process with restricted permissions
     SessionFork(std::string session_id, int32_t max_functions, int32_t memory_size);
-    void fork(std::string controller_address, std::string hole_puncher_address);
+    bool fork(std::string controller_address, std::string hole_puncher_address);
     void shutdown();
   };
 

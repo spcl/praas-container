@@ -1,16 +1,16 @@
 
-#include "praas/messages.hpp"
 #include <fstream>
 #include <filesystem>
-
+#include <thread>
 #include <dlfcn.h>
 
 #include <cJSON.h>
 #include <spdlog/spdlog.h>
 
+#include <praas/messages.hpp>
 #include <praas/function.hpp>
+#include <praas/session.hpp>
 #include <praas/output.hpp>
-#include <thread>
 
 namespace praas::function {
 
@@ -81,23 +81,28 @@ namespace praas::function {
     return reinterpret_cast<FuncType>((*it).second);
   }
 
-
   FunctionWorker::FunctionWorker(FunctionsLibrary & library):
     _library(library)
   {}
 
-  void FunctionWorker::invoke(std::string fname, std::string function_id, ssize_t bytes,
-    praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* channel
+  void FunctionWorker::invoke(
+    std::string fname, std::string function_id,
+    ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
+    const praas::session::SharedMemory* shm,
+    praas::output::Channel* channel
   )
   {
     spdlog::debug("Invoking function {}, invocation id {}, with {} payload", fname, function_id, bytes);
     FunctionWorker & worker = FunctionWorkers::get(std::this_thread::get_id());
-    worker._invoke(fname, function_id, bytes, buf, channel);
+    worker._invoke(fname, function_id, bytes, buf, shm, channel);
     spdlog::debug("Invoked function {}, invocation id {}, with {} payload", fname, function_id, bytes);
   }
 
-  void FunctionWorker::_invoke(const std::string& fname, const std::string& function_id, ssize_t bytes,
-    praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* channel
+  void FunctionWorker::_invoke(
+    const std::string& fname, const std::string& function_id,
+    ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
+    const praas::session::SharedMemory* shm,
+    praas::output::Channel* channel
   )
   {
     auto func_ptr = _library.get_function(fname);
@@ -106,7 +111,11 @@ namespace praas::function {
       spdlog::error("Invoking function {} failed - function unknown!", fname);
       return;
     }
-    int return_code = (*func_ptr)(buf.val, bytes, function_id, channel);
+    int return_code = (*func_ptr)(
+      buf.val, bytes,
+      reinterpret_cast<uint8_t*>(shm->ptr()), shm->size(),
+      function_id, channel
+    );
     channel->mark_end(return_code, function_id);
   }
 

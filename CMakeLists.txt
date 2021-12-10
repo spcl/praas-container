@@ -55,6 +55,7 @@ target_link_libraries(runtime_library PUBLIC sockpp-static)
 target_link_libraries(runtime_library PUBLIC tcpunch)
 target_link_libraries(runtime_library PUBLIC cjson-static)
 target_link_libraries(runtime_library PUBLIC dl)
+target_link_libraries(runtime_library PUBLIC rt)
 
 ###
 # Session exec
