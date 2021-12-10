@@ -12,6 +12,7 @@ extern "C" int example(uint8_t* buffer, size_t bytes, praas::output::Channel* ou
 
 extern "C" int example2(uint8_t* buffer, size_t bytes, praas::output::Channel* out)
 {
+  out->send("Hello, World!", 14);
   out->send("Hello, World2!", 15);
   return 0;
 }
