@@ -18,12 +18,15 @@ namespace praas::output {
 namespace praas::function {
 
   struct FunctionsLibrary {
-    void* _handle;
+    std::unordered_map<std::string, void*> _libraries;
     std::unordered_map<std::string, void*> _functions;
+    static constexpr char DEFAULT_CODE_LOCATION[] = "/code";
+    static constexpr char DEFAULT_USER_CONFIG_LOCATION[] = "config.json";
+    typedef int (*FuncType)(uint8_t*, uint32_t, praas::output::Channel*);
 
-    FunctionsLibrary(std::string user_configuration);
+    FunctionsLibrary();
     ~FunctionsLibrary();
-    void invoke(std::string name);
+    FuncType get_function(std::string name);
   };
 
   struct FunctionWorker {
@@ -31,10 +34,14 @@ namespace praas::function {
     FunctionsLibrary& _library;
 
     FunctionWorker(FunctionsLibrary &);
-    //void resize(ssize_t size);
     static void invoke(
       std::string fname, ssize_t bytes,
-      praas::buffer::Buffer<int8_t> buf, praas::output::Channel* connection
+      praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* connection
+    );
+  private:
+    void _invoke(
+      std::string fname, ssize_t bytes,
+      praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* connection
     );
   };
 
