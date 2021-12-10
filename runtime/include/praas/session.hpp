@@ -77,8 +77,8 @@ namespace praas::session {
       ssize_t bytes = connection.read(msg.data, 22);
       spdlog::debug(
         "Session {} polled {} bytes of new invocations from {}",
-        bytes,
         session_id,
+        bytes,
         connection.peer_address().to_string()
       );
 
@@ -107,20 +107,22 @@ namespace praas::session {
       }
       auto parsed_msg = dynamic_cast_unique<praas::messages::FunctionRequestMsg>(std::move(ptr));
 
-      if(parsed_msg->payload() == 0) {
-        spdlog::info("No invocation data");
-        return true;
+      praas::buffer::Buffer<uint8_t> buf;
+      ssize_t payload_bytes;
+      if(parsed_msg->payload() > 0) {
+        // Receive payload
+        buf = _buffers.retrieve_buffer(parsed_msg->payload());
+        if(buf.size == 0) {
+          spdlog::error("Not enough memory capacity to handle the invocation!");
+          out_connection.send_error(praas::messages::FunctionMessage::Status::OUT_OF_MEMORY);
+          return true;
+        }
+        payload_bytes = connection.read(buf.val, parsed_msg->payload());
+        spdlog::debug("Function {}, received {} payload", parsed_msg->function_id(), payload_bytes);
+      } else {
+        buf = praas::buffer::Buffer<uint8_t>{.val = nullptr, .size = 0};
+        payload_bytes = 0;
       }
-
-      // Receive payload
-      auto buf = _buffers.retrieve_buffer(parsed_msg->payload());
-      if(buf.size == 0) {
-        spdlog::error("Not enough memory capacity to handle the invocation!");
-        out_connection.send_error(praas::messages::FunctionMessage::Status::OUT_OF_MEMORY);
-        return true;
-      }
-      ssize_t payload_bytes = connection.read(buf.val, parsed_msg->payload());
-      spdlog::debug("Function {}, received {} payload", parsed_msg->function_id(), payload_bytes);
 
       // Invoke function
       _pool.push_task(
