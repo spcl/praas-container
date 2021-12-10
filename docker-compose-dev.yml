@@ -26,6 +26,7 @@ services:
       - "8080"
     volumes:
       - ./${DEV}:/dev-praas
+      - ./${DEV}/examples:/code
     environment:
       - NUMPROCS=1
       - HOLEPUNCHER_ADDR=tcpunch
@@ -55,7 +56,7 @@ services:
   haproxy:
     image: haproxy:latest
     depends_on:
-      - control_plane
+     - control_plane
     volumes:
       - ./deployment/conf/haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg:ro
       - ./${SECRET_CERT}:/usr/local/etc/praas/server.pem:ro
