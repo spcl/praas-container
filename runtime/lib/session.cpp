@@ -99,7 +99,7 @@ namespace praas::session {
     }
 
     spdlog::debug("Created {} kbytes of shared memory at {} {}", size, session_id, session_id.length());
-    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size};
+    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size * 1024};
   }
 
   std::optional<SharedMemory> SharedMemory::open(std::string session_id, int32_t size)
@@ -122,7 +122,7 @@ namespace praas::session {
     }
 
     spdlog::debug("Opened {} kbytes of shared memory at {}", size, session_id);
-    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size, ptr};
+    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size * 1024, ptr};
   }
 
   SessionFork::SessionFork(std::string session_id, int32_t max_functions, int32_t memory_size):
