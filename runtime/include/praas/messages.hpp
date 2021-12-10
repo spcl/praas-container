@@ -110,7 +110,8 @@ namespace praas::messages {
 
     // FIXME: global memory requests
 
-    static constexpr uint16_t EXPECTED_LENGTH = 38;
+    // Dictated by the control-plane default packet size of 39 bytes.
+    static constexpr uint16_t EXPECTED_LENGTH = 39;
     int8_t data[EXPECTED_LENGTH];
 
     RecvMessageBuffer()
