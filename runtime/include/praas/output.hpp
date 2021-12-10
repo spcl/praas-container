@@ -34,7 +34,7 @@ namespace praas::output {
           spdlog::error("Sending payload failed! Reason: {}", strerror(errno));
           return false;
         } else {
-          spdlog::debug("Sent {} bytes of payload!", payload_size);
+          spdlog::debug("Sent {} bytes of payload on id {}!", payload_size, function_id);
           return true;
         }
       }
@@ -50,7 +50,7 @@ namespace praas::output {
         spdlog::error("Sending end mark failed! Reason: {}", strerror(errno));
         return false;
       } else {
-        spdlog::debug("Sent end mark!");
+        spdlog::debug("Sent end mark on id {}!", function_id);
         return true;
       }
     }
@@ -64,7 +64,7 @@ namespace praas::output {
         spdlog::error("Error notification failed! Reason: {}", strerror(errno));
         return false;
       } else {
-        spdlog::debug("Sent error!");
+        spdlog::debug("Sent error on id {}!", function_id);
         return true;
       }
     }

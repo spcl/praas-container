@@ -90,10 +90,10 @@ namespace praas::function {
     praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* channel
   )
   {
-    spdlog::debug("Invoking function {} with {} payload", fname, bytes);
+    spdlog::debug("Invoking function {}, invocation id {}, with {} payload", fname, function_id, bytes);
     FunctionWorker & worker = FunctionWorkers::get(std::this_thread::get_id());
     worker._invoke(fname, function_id, bytes, buf, channel);
-    spdlog::debug("Invoked function {} with {} payload", fname, bytes);
+    spdlog::debug("Invoked function {}, invocation id {}, with {} payload", fname, function_id, bytes);
   }
 
   void FunctionWorker::_invoke(const std::string& fname, const std::string& function_id, ssize_t bytes,
