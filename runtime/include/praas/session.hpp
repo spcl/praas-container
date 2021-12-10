@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <string>
-#include <bitset>
 
 #include <sockpp/tcp_connector.h>
 #include <thread_pool.hpp>
@@ -98,10 +97,6 @@ namespace praas::session {
         return true;
       }
 
-      spdlog::info("HEADER!");
-      for(int i = 0; i < 38; ++i) {
-        spdlog::info("HEADER {} {} ", i, std::bitset<8>(static_cast<uint8_t>(msg.data[i])).to_string());
-      }
       // Parse the message
       std::unique_ptr<praas::messages::RecvMessage> ptr = msg.parse(bytes);
       if(!ptr || ptr->type() != praas::messages::RecvMessage::Type::INVOCATION_REQUEST) {
