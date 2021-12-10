@@ -5,7 +5,7 @@
 #include <praas/output.hpp>
 
 extern "C" int example(
-  uint8_t* buffer, size_t bytes, uint8_t* shm, size_t shm_bytes,
+  uint8_t*, size_t, uint8_t*, size_t,
   const std::string& function_id, praas::output::Channel* out
 )
 {
@@ -14,7 +14,7 @@ extern "C" int example(
 }
 
 extern "C" int example2(
-  uint8_t* buffer, size_t bytes, uint8_t* shm, size_t shm_bytes,
+  uint8_t*, size_t, uint8_t*, size_t,
   const std::string& function_id, praas::output::Channel* out
 )
 {
