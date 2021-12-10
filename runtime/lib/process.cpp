@@ -120,9 +120,9 @@ namespace praas::process {
   {
     spdlog::info("Shutdown process!");
     _ending = true;
-    _control_plane_socket.shutdown(); 
     for(praas::session::SessionFork & session: _sessions)
       session.shutdown();
+    _control_plane_socket.shutdown();
   }
 
 }
