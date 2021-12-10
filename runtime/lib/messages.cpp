@@ -21,13 +21,13 @@ namespace praas::messages {
 
   std::unique_ptr<RecvMessage> RecvMessageBuffer::parse(ssize_t data_size)
   {
+    if(data_size != RecvMessageBuffer::EXPECTED_LENGTH)
+      return nullptr;
     int16_t type = *reinterpret_cast<int16_t*>(data);
-    if(data_size == SessionRequestMsg::EXPECTED_LENGTH
-        && type == static_cast<int16_t>(RecvMessage::Type::SESSION_REQUEST)
+    if(type == static_cast<int16_t>(RecvMessage::Type::SESSION_REQUEST)
     ) {
       return std::make_unique<SessionRequestMsg>(data + 2);
-    } else if(data_size == FunctionRequestMsg::EXPECTED_LENGTH
-        && type == static_cast<int16_t>(RecvMessage::Type::INVOCATION_REQUEST)
+    } else if(type == static_cast<int16_t>(RecvMessage::Type::INVOCATION_REQUEST)
     ) {
       return std::make_unique<FunctionRequestMsg>(data + 2);
     } else {
@@ -55,12 +55,20 @@ namespace praas::messages {
     return RecvMessage::Type::SESSION_REQUEST;
   }
 
-  std::string FunctionRequestMsg::function_id()
+  std::string FunctionRequestMsg::function_name()
   {
     // Avoid direct string construction in case network payload is not a valid null-terminated string
     // strnlen is in POSIX. strnlen_s in C11 but not in C++17
     size_t len = strnlen(reinterpret_cast<char*>(buf + 4), 16);
     return std::string{reinterpret_cast<char*>(buf + 4), len};
+  }
+
+  std::string FunctionRequestMsg::function_id()
+  {
+    // Avoid direct string construction in case network payload is not a valid null-terminated string
+    // strnlen is in POSIX. strnlen_s in C11 but not in C++17
+    size_t len = strnlen(reinterpret_cast<char*>(buf + 20), 16);
+    return std::string{reinterpret_cast<char*>(buf + 20), len};
   }
 
   int32_t FunctionRequestMsg::payload()

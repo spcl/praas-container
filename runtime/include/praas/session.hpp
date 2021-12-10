@@ -74,7 +74,7 @@ namespace praas::session {
         session_id,
         connection.peer_address().to_string()
       );
-      ssize_t bytes = connection.read(msg.data, 22);
+      ssize_t bytes = connection.read(msg.data, msg.EXPECTED_LENGTH);
       spdlog::debug(
         "Session {} polled {} bytes of new invocations from {}",
         session_id,
@@ -98,27 +98,40 @@ namespace praas::session {
         return true;
       }
 
+      spdlog::info("HEADER!");
+      for(int i = 0; i < 38; ++i) {
+        spdlog::info("HEADER {} {} ", i, std::bitset<8>(static_cast<uint8_t>(msg.data[i])).to_string());
+      }
       // Parse the message
       std::unique_ptr<praas::messages::RecvMessage> ptr = msg.parse(bytes);
       if(!ptr || ptr->type() != praas::messages::RecvMessage::Type::INVOCATION_REQUEST) {
         spdlog::error("Unknown request");
-        out_connection.send_error(praas::messages::FunctionMessage::Status::UNKNOWN_REQUEST);
+        out_connection.send_error(
+          praas::messages::FunctionMessage::Status::UNKNOWN_REQUEST,
+          ""
+        );
         return true;
       }
       auto parsed_msg = dynamic_cast_unique<praas::messages::FunctionRequestMsg>(std::move(ptr));
 
       praas::buffer::Buffer<uint8_t> buf;
       ssize_t payload_bytes;
+
       if(parsed_msg->payload() > 0) {
+
         // Receive payload
         buf = _buffers.retrieve_buffer(parsed_msg->payload());
         if(buf.size == 0) {
           spdlog::error("Not enough memory capacity to handle the invocation!");
-          out_connection.send_error(praas::messages::FunctionMessage::Status::OUT_OF_MEMORY);
+          out_connection.send_error(
+            praas::messages::FunctionMessage::Status::OUT_OF_MEMORY,
+            parsed_msg->function_id()
+          );
           return true;
         }
         payload_bytes = connection.read(buf.val, parsed_msg->payload());
         spdlog::debug("Function {}, received {} payload", parsed_msg->function_id(), payload_bytes);
+
       } else {
         buf = praas::buffer::Buffer<uint8_t>{.val = nullptr, .size = 0};
         payload_bytes = 0;
@@ -127,6 +140,7 @@ namespace praas::session {
       // Invoke function
       _pool.push_task(
         praas::function::FunctionWorker::invoke,
+        parsed_msg->function_name(),
         parsed_msg->function_id(),
         payload_bytes,
         buf,

@@ -14,6 +14,7 @@ namespace praas::messages {
     // 2 bytes magic number
     // 2 bytes flag - -1 if not final; otherwise return code from user
     // 4 bytes payload size
+    // 16 bytes function invocaton id
     // Total 8 bytes
     //
     // Interpretation
@@ -29,28 +30,31 @@ namespace praas::messages {
       UNKNOWN_FUNCTION = 3
     };
 
-    static constexpr uint16_t BUF_SIZE = 8;
+    static constexpr uint16_t BUF_SIZE = 24;
     int8_t data[BUF_SIZE];
 
-    void fill_payload(int32_t size)
+    void fill_payload(int32_t size, std::string function_id)
     {
       *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(Status::PAYLOAD);
       *reinterpret_cast<int16_t*>(data+2) = -1;
       *reinterpret_cast<int32_t*>(data+4) = size;
+      std::strncpy(reinterpret_cast<char*>(data + 8), function_id.data(), 16);
     }
 
-    void fill_error(FunctionMessage::Status status)
+    void fill_error(FunctionMessage::Status status, std::string function_id)
     {
       *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(status);
       *reinterpret_cast<int16_t*>(data+2) = -1;
       *reinterpret_cast<int32_t*>(data+4) = 0;
+      std::strncpy(reinterpret_cast<char*>(data + 8), function_id.data(), 16);
     }
 
-    void fill_end(int16_t return_code)
+    void fill_end(int16_t return_code, std::string function_id)
     {
       *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(Status::PAYLOAD);
       *reinterpret_cast<int16_t*>(data+2) = return_code;
       *reinterpret_cast<int32_t*>(data+4) = 0;
+      std::strncpy(reinterpret_cast<char*>(data + 8), function_id.data(), 16);
     }
   };
 
@@ -100,22 +104,24 @@ namespace praas::messages {
     // Function invocation request
     // 2 bytes of identifier
     // 4 bytes payload size
+    // 16 bytes of function name
     // 16 bytes of function id
-    // 22 bytes
+    // 38 bytes
 
-    static constexpr uint16_t REQUEST_BUF_SIZE = 128;
-    int8_t data[REQUEST_BUF_SIZE];
+    // FIXME: global memory requests
+
+    static constexpr uint16_t EXPECTED_LENGTH = 38;
+    int8_t data[EXPECTED_LENGTH];
 
     RecvMessageBuffer()
     {
-      memset(data, REQUEST_BUF_SIZE, 0);
+      memset(data, 0, EXPECTED_LENGTH);
     }
 
     std::unique_ptr<RecvMessage> parse(ssize_t);
   };
 
   struct SessionRequestMsg: RecvMessage {
-    static constexpr uint16_t EXPECTED_LENGTH = 26;
     int8_t* buf;
 
     SessionRequestMsg(int8_t* buf = nullptr):
@@ -130,13 +136,13 @@ namespace praas::messages {
 
   struct FunctionRequestMsg : RecvMessage {
 
-    static constexpr uint16_t EXPECTED_LENGTH = 22;
     int8_t* buf;
 
     FunctionRequestMsg(int8_t* buf = nullptr):
       buf(buf)
     {}
 
+    std::string function_name();
     std::string function_id();
     int32_t payload();
     Type type() const override;

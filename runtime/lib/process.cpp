@@ -50,7 +50,7 @@ namespace praas::process {
     while(!_ending) {
 
       // Read requests to allocate new sessions
-      ssize_t read_size = _control_plane_socket.read(msg.data, msg.REQUEST_BUF_SIZE);
+      ssize_t read_size = _control_plane_socket.read(msg.data, msg.EXPECTED_LENGTH);
 
       if(_ending)
         break;

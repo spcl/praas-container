@@ -86,31 +86,28 @@ namespace praas::function {
     _library(library)
   {}
 
-  void FunctionWorker::invoke(std::string fname, ssize_t bytes,
+  void FunctionWorker::invoke(std::string fname, std::string function_id, ssize_t bytes,
     praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* channel
   )
   {
     spdlog::debug("Invoking function {} with {} payload", fname, bytes);
     FunctionWorker & worker = FunctionWorkers::get(std::this_thread::get_id());
-    worker._invoke(fname, bytes, buf, channel);
+    worker._invoke(fname, function_id, bytes, buf, channel);
     spdlog::debug("Invoked function {} with {} payload", fname, bytes);
   }
 
-  void FunctionWorker::_invoke(std::string fname, ssize_t bytes,
+  void FunctionWorker::_invoke(const std::string& fname, const std::string& function_id, ssize_t bytes,
     praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* channel
   )
   {
     auto func_ptr = _library.get_function(fname);
     if(!func_ptr) {
-      channel->send_error(praas::messages::FunctionMessage::Status::UNKNOWN_FUNCTION);
+      channel->send_error(praas::messages::FunctionMessage::Status::UNKNOWN_FUNCTION, function_id);
       spdlog::error("Invoking function {} failed - function unknown!", fname);
       return;
     }
-    int return_code = (*func_ptr)(buf.val, bytes, channel);
-    //char c = 1;
-    // FIXME: replace with user output
-    //channel->send(&c, 1, -1);
-    channel->mark_end(return_code);
+    int return_code = (*func_ptr)(buf.val, bytes, function_id, channel);
+    channel->mark_end(return_code, function_id);
   }
 
   std::unordered_map<std::thread::id, FunctionWorker*> FunctionWorkers::_workers;

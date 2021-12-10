@@ -22,7 +22,7 @@ namespace praas::function {
     std::unordered_map<std::string, void*> _functions;
     static constexpr char DEFAULT_CODE_LOCATION[] = "/code";
     static constexpr char DEFAULT_USER_CONFIG_LOCATION[] = "config.json";
-    typedef int (*FuncType)(uint8_t*, uint32_t, praas::output::Channel*);
+    typedef int (*FuncType)(uint8_t*, uint32_t, const std::string&, praas::output::Channel*);
 
     FunctionsLibrary();
     ~FunctionsLibrary();
@@ -35,12 +35,12 @@ namespace praas::function {
 
     FunctionWorker(FunctionsLibrary &);
     static void invoke(
-      std::string fname, ssize_t bytes,
+      std::string fname, std::string function_id, ssize_t bytes,
       praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* connection
     );
   private:
     void _invoke(
-      std::string fname, ssize_t bytes,
+      const std::string& fname, const std::string& function_id, ssize_t bytes,
       praas::buffer::Buffer<uint8_t> buf, praas::output::Channel* connection
     );
   };

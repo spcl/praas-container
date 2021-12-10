@@ -19,10 +19,10 @@ namespace praas::output {
       socket(socket)
     {}
 
-    bool send(char* payload, int payload_size)
+    bool send(char* payload, int payload_size, const std::string & function_id)
     {
       praas::messages::FunctionMessage msg;
-      msg.fill_payload(payload_size);
+      msg.fill_payload(payload_size, function_id);
       ssize_t bytes = ::send(socket.handle(), msg.data, msg.BUF_SIZE, MSG_NOSIGNAL);
       if(bytes == -1)  {
         spdlog::error("Sending payload header failed! Reason: {}", strerror(errno));
@@ -41,10 +41,10 @@ namespace praas::output {
       return true;
     }
 
-    bool mark_end(int return_code)
+    bool mark_end(int return_code, const std::string & function_id)
     {
       praas::messages::FunctionMessage msg;
-      msg.fill_end(return_code);
+      msg.fill_end(return_code, function_id);
       ssize_t bytes = ::send(socket.handle(), msg.data, msg.BUF_SIZE, MSG_NOSIGNAL);
       if(bytes == -1)  {
         spdlog::error("Sending end mark failed! Reason: {}", strerror(errno));
@@ -55,10 +55,10 @@ namespace praas::output {
       }
     }
 
-    bool send_error(praas::messages::FunctionMessage::Status status)
+    bool send_error(praas::messages::FunctionMessage::Status status, const std::string & function_id)
     {
       praas::messages::FunctionMessage msg;
-      msg.fill_error(status);
+      msg.fill_error(status, function_id);
       ssize_t bytes = ::send(socket.handle(), msg.data, msg.BUF_SIZE, MSG_NOSIGNAL);
       if(bytes == -1)  {
         spdlog::error("Error notification failed! Reason: {}", strerror(errno));
