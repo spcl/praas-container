@@ -127,6 +127,7 @@ namespace praas::session {
 
   SessionFork::SessionFork(std::string session_id, int32_t max_functions, int32_t memory_size):
     session_id(session_id),
+    max_functions(max_functions),
     memory_size(memory_size),
     child_pid(-1)
   {}
@@ -146,12 +147,15 @@ namespace praas::session {
       int fd = open(out_file.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
       dup2(fd, 1);
       dup2(fd, 2);
+      std::string memory_size_str = std::to_string(memory_size);
+      std::string max_functions_str = std::to_string(max_functions);
       const char * argv[] = {
         "/dev-praas/bin/runtime_session",
         "--control-plane-addr", controller_address.c_str(),
         "--hole-puncher-addr", hole_puncher_address.c_str(),
         "--session-id", session_id.c_str(),
-        "--shared-memory", "FIXME",
+        "--shared-memory-size", memory_size_str.c_str(),
+        "--max-functions", max_functions_str.c_str(),
         "-v", nullptr
       };
       int ret = execv(argv[0], const_cast<char**>(&argv[0]));

@@ -10,7 +10,8 @@ namespace praas::session {
     std::string ip_address;
     std::string hole_puncher_address;
     std::string session_id;
-    std::string shared_memory;
+    int32_t shared_memory_size;
+    int32_t max_functions;
     bool verbose;
   };
   Options opts(int argc, char ** argv);

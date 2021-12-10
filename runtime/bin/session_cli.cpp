@@ -45,7 +45,7 @@ int main(int argc, char ** argv)
   sigaction(SIGPIPE, &sa, NULL);
 
   // FIXME: parameters
-  praas::session::Session server{opts.session_id, 1, 1};
+  praas::session::Session server{opts.session_id, opts.max_functions, opts.shared_memory_size};
   server.start(opts.ip_address, opts.hole_puncher_address);
 
   spdlog::info("Session is closing down");

@@ -176,6 +176,7 @@ namespace praas::session {
   struct SessionFork {
     SharedMemory memory;
     std::string session_id;
+    int32_t max_functions;
     int32_t memory_size;
     pid_t child_pid;
 
