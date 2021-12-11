@@ -17,6 +17,13 @@ namespace praas::messages {
     std::strncpy(reinterpret_cast<char*>(data + 2), session_id.data(), 16);
   }
 
+  void SendMessage::fill_session_close(int32_t memory_size, std::string session_id)
+  {
+    *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(SendMessage::Type::SESSION_CLOSURE);
+    *reinterpret_cast<int32_t*>(data+2) = static_cast<int32_t>(memory_size);
+    std::strncpy(reinterpret_cast<char*>(data + 6), session_id.data(), 16);
+  }
+
   std::unique_ptr<RecvMessage> RecvMessageBuffer::parse(ssize_t data_size)
   {
     if(data_size != RecvMessageBuffer::EXPECTED_LENGTH)

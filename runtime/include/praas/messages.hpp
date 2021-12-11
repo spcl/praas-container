@@ -62,7 +62,8 @@ namespace praas::messages {
   {
     enum class Type : int16_t {
       PROCESS_IDENTIFICATION = 1,
-      SESSION_IDENTIFICATION = 2
+      SESSION_IDENTIFICATION = 2,
+      SESSION_CLOSURE = 3
     };
 
     // Process Identification
@@ -85,6 +86,7 @@ namespace praas::messages {
 
     void fill_process_identification(std::string process_id);
     void fill_session_identification(std::string session_id);
+    void fill_session_close(int32_t memory_size, std::string session_id);
   };
 
   struct RecvMessage {

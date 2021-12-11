@@ -180,6 +180,8 @@ namespace praas::process {
 
   void Process::session_deleted(int pid)
   {
+    int32_t swapped_memory = 0;
+    std::string session_id;
     {
       std::lock_guard<std::mutex> guard(_sessions_mutex);
 
@@ -190,12 +192,13 @@ namespace praas::process {
           return s.child_pid == pid;
         }
       );
+      if(it == _sessions.end()) {
+        spdlog::error("Can't swap session with PID {} because it doesn't exist!", pid);
+        return;
+      }
+      session_id = (*it).session_id;
 
       if(swapping_enabled()) {
-        if(it == _sessions.end()) {
-          spdlog::error("Can't swap session with PID {} because it doesn't exist!", pid);
-          return;
-        }
 
         spdlog::debug("Swapping session {} to storage.", (*it).session_id);
 
@@ -205,9 +208,11 @@ namespace praas::process {
           reinterpret_cast<char*>((*it).memory.ptr()),
           (*it).memory.size()
         );
+        swapped_memory = (*it).memory.size();
 
         spdlog::debug("Swapped session {} to storage, deleting memory.", (*it).session_id);
       }
+
 
       // Now clean the object and unlink memory.
       _sessions.erase(it);
@@ -221,6 +226,10 @@ namespace praas::process {
         );
       }
     }
+    // Notify control plane about the change
+    praas::messages::SendMessage msg;
+    msg.fill_session_close(swapped_memory, session_id);
+    _control_plane_socket.write(msg.data, msg.BUF_SIZE);
   }
 
 }
