@@ -156,7 +156,13 @@ namespace praas::process {
         // Now we can start a session
         else {
           _sessions.emplace_back(msg.session_id(), msg.max_functions(), msg.memory_size());
-          _sessions.back().fork(_control_plane_socket.peer_address().to_string(), _hole_puncher_address);
+          bool ret = _sessions.back().fork(
+            _control_plane_socket.peer_address().to_string(),
+            _hole_puncher_address,
+            _swapper
+          );
+          // FIXME: proper eror codes for fork failure, session swaps
+          result = ret ? ErrorCode::SUCCESS : ErrorCode::UNKNOWN_FAILURE;
         }
       }
     }

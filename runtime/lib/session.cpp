@@ -1,6 +1,7 @@
 
 #include <charconv>
 #include <future>
+#include <utility>
 
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -13,7 +14,7 @@
 #include <praas/session.hpp>
 #include <praas/buffer.hpp>
 #include <praas/function.hpp>
-#include <utility>
+#include <praas/swapper.hpp>
 
 using praas::buffer::BufferQueue;
 
@@ -94,7 +95,10 @@ namespace praas::session {
     }
   }
 
-  std::optional<SharedMemory> SharedMemory::create(std::string session_id, int32_t size)
+  std::optional<SharedMemory> SharedMemory::create(
+    std::string session_id, int32_t size,
+    swapper::S3Swapper & s3_swapper
+  )
   {
     session_id.insert(0, "/");
     int fd = shm_open(session_id.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -106,6 +110,10 @@ namespace praas::session {
       );
       return std::optional<SharedMemory>{};
     }
+
+    // Swapped memory has negative size
+    bool swap_in = size < 0;
+    size *= swap_in ? -1 : 1;
 
     // kbytes -> bytes
     size *= 1024;
@@ -119,6 +127,14 @@ namespace praas::session {
       spdlog::error("Failed to map shared memory");
       return std::optional<SharedMemory>{};
     }
+
+    if(swap_in)
+      if(!s3_swapper.swap_in(session_id, static_cast<char*>(ptr), size)) {
+        spdlog::error("Swapping in failed, unlink!");
+        munmap(ptr, size);
+        shm_unlink(session_id.c_str());
+        return std::optional<SharedMemory>{};
+      }
 
     spdlog::debug("Created {} kbytes of shared memory at {} for session_id {}", size, fmt::ptr(ptr), session_id);
     return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size, ptr, true};
@@ -137,15 +153,13 @@ namespace praas::session {
       return std::optional<SharedMemory>{};
     }
 
-    // kbytes -> bytes
-    size *= 1024;
     void* ptr = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
     if(ptr == MAP_FAILED) {
       spdlog::error("Failed to map shared memory");
       return std::optional<SharedMemory>{};
     }
 
-    spdlog::debug("Opened {} kbytes of shared memory at {} for session {}", size, fmt::ptr(ptr), session_id);
+    spdlog::debug("Opened {} bytes of shared memory at {} for session {}", size, fmt::ptr(ptr), session_id);
     return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size, ptr};
   }
 
@@ -156,9 +170,10 @@ namespace praas::session {
     child_pid(-1)
   {}
 
-  bool SessionFork::fork(std::string controller_address, std::string hole_puncher_address)
+  bool SessionFork::fork(std::string controller_address, std::string hole_puncher_address,
+      swapper::S3Swapper& s3_swapper)
   {
-    std::optional<SharedMemory> shm = SharedMemory::create(session_id, memory_size);
+    std::optional<SharedMemory> shm = SharedMemory::create(session_id, memory_size, s3_swapper);
     if(!shm.has_value()) {
       spdlog::error("Couldn't fork process - no shared memory!");
       return false;
@@ -168,10 +183,11 @@ namespace praas::session {
     child_pid = vfork();
     if(child_pid == 0) {
       auto out_file = ("session_" + session_id);
-      int fd = open(out_file.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+      int fd = open(out_file.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
       dup2(fd, 1);
       dup2(fd, 2);
-      std::string memory_size_str = std::to_string(memory_size);
+      // Take memory from shm object -> it's in bytes now and definetely positive
+      std::string memory_size_str = std::to_string(shm.value().size());
       std::string max_functions_str = std::to_string(max_functions);
       const char * argv[] = {
         "/dev-praas/bin/runtime_session",

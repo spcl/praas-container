@@ -35,6 +35,10 @@ namespace {
 
 }
 
+namespace praas::swapper {
+  struct S3Swapper;
+}
+
 namespace praas::session {
 
 
@@ -72,7 +76,7 @@ namespace praas::session {
       return _size;
     }
 
-    static std::optional<SharedMemory> create(std::string session_id, int32_t size);
+    static std::optional<SharedMemory> create(std::string session_id, int32_t size, swapper::S3Swapper& );
     static std::optional<SharedMemory> open(std::string session_id, int32_t size);
   };
 
@@ -138,6 +142,11 @@ namespace praas::session {
       }
       auto parsed_msg = dynamic_cast_unique<praas::messages::FunctionRequestMsg>(std::move(ptr));
 
+      // Ignore empty requests - this is how control plane signalizes the session that it doesn't
+      // have invocations anymore.
+      if(parsed_msg.get()->function_name().empty())
+        return true;
+
       praas::buffer::Buffer<uint8_t> buf;
       ssize_t payload_bytes;
 
@@ -183,7 +192,7 @@ namespace praas::session {
     pid_t child_pid;
 
     SessionFork(std::string session_id, int32_t max_functions, int32_t memory_size);
-    bool fork(std::string controller_address, std::string hole_puncher_address);
+    bool fork(std::string controller_address, std::string hole_puncher_address, swapper::S3Swapper&);
     void shutdown();
   };
 

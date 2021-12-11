@@ -69,6 +69,7 @@ namespace praas::swapper {
     // MUST be called before shutdown!
     void shutdown_swapping();
     bool swap(std::string_view session_id, char* memory, int32_t size);
+    bool swap_in(std::string_view session_id, char* memory, int32_t size);
     bool enable_swapping();
   };
 
