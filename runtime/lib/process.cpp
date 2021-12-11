@@ -1,5 +1,6 @@
 
 #include <optional>
+#include <sys/wait.h>
 
 #include <sockpp/inet_address.h>
 #include <sockpp/tcp_connector.h>
@@ -23,36 +24,55 @@ namespace praas::process {
   {
     spdlog::debug("A session shutdown on PID {}", si->si_pid);
 
-    // Swap the session
+    // Swap the session, delete resources
     Process* pr = Process::get_instance();
-    if(pr->swapping_enabled())
-      std::thread{ &Process::session_deleted, pr, si->si_pid}.detach();
+    std::thread{ &Process::session_deleted, pr, si->si_pid}.detach();
   }
 
   void Process::create(
     std::optional<Process> & dest,
     std::string process_id, std::string ip_address, int32_t port,
     std::string hole_puncher_addr, int16_t max_sessions,
-    bool verbose
+    bool verbose, bool enable_swapping
   )
   {
-    try {
-      sockpp::tcp_connector socket;
-      if(socket.connect(sockpp::inet_address(ip_address, port))) {
-        spdlog::debug(
-          "Succesful connection to control plane {}:{} from {} on process {}, socket handle {}",
-          ip_address, port, socket.address().to_string(), process_id, socket.handle()
-        );
+    dest.emplace(
+      process_id, hole_puncher_addr,
+      max_sessions, verbose
+    );
 
-        // Copy elision is mandatory - no destruction of the socket
-        dest.emplace(
-          process_id, hole_puncher_addr, std::move(socket),
-          max_sessions, verbose
-        );
-      } else
-        dest.reset();
-    } catch (...) {
+    // Enable swapping first - this can be very time consuming.
+    if(enable_swapping && !dest->enable_swapping()) {
+      spdlog::error(
+        "Failed to initalize session swapping a new process {} with max sessions {}",
+        process_id, max_sessions
+      );
       dest.reset();
+      return;
+    }
+
+    // Now connect
+    if(!dest->connect(ip_address, port)) {
+      dest.reset();
+      return;
+    }
+    return;
+  }
+
+  bool Process::connect(std::string ip_address, int32_t port)
+  {
+    if(_control_plane_socket.connect(sockpp::inet_address(ip_address, port))) {
+      spdlog::debug(
+        "Succesful connection to control plane {}:{} from {} on process {}.",
+        ip_address, port, _control_plane_socket.address().to_string(), _process_id
+      );
+      return true;
+    } else {
+      spdlog::error(
+        "Unsuccesful connection to control plane {}:{} from {} on process {}.",
+        ip_address, port, _control_plane_socket.address().to_string(), _process_id
+      );
+      return false;
     }
   }
 
@@ -171,26 +191,35 @@ namespace praas::process {
         }
       );
 
-      if(it == _sessions.end()) {
-        spdlog::error("Can't swap session with PID {} because it doesn't exist!", pid);
-        return;
+      if(swapping_enabled()) {
+        if(it == _sessions.end()) {
+          spdlog::error("Can't swap session with PID {} because it doesn't exist!", pid);
+          return;
+        }
+
+        spdlog::debug("Swapping session {} to storage.", (*it).session_id);
+
+        // Swap the memory
+        _swapper.swap(
+          (*it).session_id,
+          reinterpret_cast<char*>((*it).memory.ptr()),
+          (*it).memory.size()
+        );
+
+        spdlog::debug("Swapped session {} to storage, deleting memory.", (*it).session_id);
       }
 
-      spdlog::debug("Swapping session {} to storage.", (*it).session_id);
-
-      // Swap the memory
-      _swapper.swap(
-        (*it).session_id,
-        reinterpret_cast<char*>((*it).memory.ptr()),
-        (*it).memory.size()
-      );
-
-      spdlog::debug("Swapped session {} to storage, deleting memory.", (*it).session_id);
-
       // Now clean the object and unlink memory.
-      // We caught the SIGCHLD signal, which means we don't need to wait for the PID - no zombie.
       _sessions.erase(it);
 
+      // Finally, wait for PID to clean up zombies
+      int status;
+      if(waitpid(pid, &status, WNOHANG) != pid) {
+        spdlog::error(
+          "Couldn't wait for the child {}, error {}.",
+          pid, strerror(errno)
+        );
+      }
     }
   }
 

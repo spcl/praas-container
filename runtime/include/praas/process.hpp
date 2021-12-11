@@ -38,8 +38,7 @@ namespace praas::process {
 
     Process(
       std::string process_id, std::string hole_puncher_address,
-      sockpp::tcp_connector && socket, int16_t max_sessions,
-      bool verbose
+      int16_t max_sessions, bool verbose
     ):
       _ending(false),
       _max_sessions(max_sessions),
@@ -47,8 +46,6 @@ namespace praas::process {
       _hole_puncher_address(hole_puncher_address),
       _swapper(verbose)
     {
-      _control_plane_socket = std::move(socket); 
-
       // FIXME: Signal handling - make singleton
       _instance = this;
 
@@ -104,8 +101,9 @@ namespace praas::process {
       std::optional<Process> &,
       std::string process_id, std::string ip_address, int32_t port,
       std::string hole_puncher_addr, int16_t max_sessions,
-      bool verbose = false
+      bool verbose = false, bool enable_swapping = false
     );
+    bool connect(std::string ip_address, int32_t port);
     void start();
     void shutdown();
     ErrorCode allocate_session(praas::messages::SessionRequestMsg&);
