@@ -9,6 +9,7 @@
 #include <sockpp/tcp_connector.h>
 
 #include <praas/session.hpp>
+#include <praas/swapper.hpp>
 
 namespace praas::process {
 
@@ -30,17 +31,25 @@ namespace praas::process {
     std::vector<praas::session::SessionFork> _sessions;
     // Connect to process to allocate sessions.
     sockpp::tcp_connector _control_plane_socket;
+    // Session swapper
+    praas::swapper::S3Swapper _swapper;
+    // Mutex used to manage active sessions
+    std::mutex _sessions_mutex;
 
     Process(
       std::string process_id, std::string hole_puncher_address,
-      sockpp::tcp_connector && socket, int16_t max_sessions
+      sockpp::tcp_connector && socket, int16_t max_sessions,
+      bool verbose
     ):
       _ending(false),
       _max_sessions(max_sessions),
       _process_id(process_id),
-      _hole_puncher_address(hole_puncher_address)
+      _hole_puncher_address(hole_puncher_address),
+      _swapper(verbose)
     {
       _control_plane_socket = std::move(socket); 
+
+      // FIXME: Signal handling - make singleton
       _instance = this;
 
       struct sigaction sa;
@@ -53,7 +62,13 @@ namespace praas::process {
       sigaction(SIGCHLD, &sa, NULL);
     }
 
-    Process(Process && p) noexcept
+    ~Process()
+    {
+      spdlog::error("Destruct {}", fmt::ptr(this));
+    }
+
+    Process(Process && p) noexcept:
+      _swapper(std::move(p._swapper))
     {
       this->_control_plane_socket = std::move(p._control_plane_socket);
       this->_ending = std::move(p._ending);
@@ -75,22 +90,32 @@ namespace praas::process {
         this->_sessions = std::move(p._sessions);
         this->_process_id = std::move(p._process_id);
         this->_hole_puncher_address = std::move(p._hole_puncher_address);
+        this->_swapper = std::move(p._swapper);
       }
       return *this;
     }
 
-    static std::optional<Process> create(
+    bool enable_swapping()
+    {
+      return _swapper.enable_swapping();
+    }
+
+    static void create(
+      std::optional<Process> &,
       std::string process_id, std::string ip_address, int32_t port,
-      std::string hole_puncher_addr, int16_t max_sessions
+      std::string hole_puncher_addr, int16_t max_sessions,
+      bool verbose = false
     );
     void start();
     void shutdown();
     ErrorCode allocate_session(praas::messages::SessionRequestMsg&);
+    bool swapping_enabled();
+    void session_deleted(int pid);
 
     static Process* _instance;
     static Process* get_instance();
   };
 
-};
+}
 
 #endif

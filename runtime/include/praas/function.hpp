@@ -66,6 +66,6 @@ namespace praas::function {
     static FunctionWorker& get(std::thread::id thread_id);
   };
 
-};
+}
 
 #endif

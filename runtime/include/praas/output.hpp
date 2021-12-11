@@ -70,6 +70,6 @@ namespace praas::output {
     }
   };
 
-};
+}
 
 #endif

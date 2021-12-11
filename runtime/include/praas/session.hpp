@@ -47,14 +47,17 @@ namespace praas::session {
     std::string _path;
     // memory block
     void* _ptr;
+    // if owned, then we need to unlink
+    bool _owned;
 
     SharedMemory():
       _size(-1),
       _fd(-1),
       _path(""),
-      _ptr(nullptr)
+      _ptr(nullptr),
+      _owned(false)
     {}
-    SharedMemory(const std::string& path, int file_descriptor, int32_t size, void* ptr = nullptr);
+    SharedMemory(const std::string& path, int file_descriptor, int32_t size, void* ptr = nullptr, bool owned = false);
     SharedMemory(SharedMemory &&);
     SharedMemory& operator=(SharedMemory && obj);
     ~SharedMemory();
@@ -154,7 +157,6 @@ namespace praas::session {
         spdlog::debug("Function {}, received {} payload", parsed_msg->function_id(), payload_bytes);
 
       } else {
-        buf = praas::buffer::Buffer<uint8_t>{.val = nullptr, .size = 0};
         payload_bytes = 0;
       }
 
@@ -186,6 +188,6 @@ namespace praas::session {
   };
 
 
-};
+}
 
 #endif

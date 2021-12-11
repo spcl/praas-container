@@ -1,6 +1,6 @@
 
-#include "praas/session.hpp"
 #include <optional>
+
 #include <sockpp/inet_address.h>
 #include <sockpp/tcp_connector.h>
 #include <sockpp/tcp_socket.h>
@@ -19,29 +19,40 @@ namespace praas::process {
     return _instance;
   }
 
-  void session_shutdown_handler(int signo, siginfo_t *si, void *ucontext)
+  void session_shutdown_handler(int, siginfo_t *si, void *)
   {
-    // FIXME: handle session swapping
     spdlog::debug("A session shutdown on PID {}", si->si_pid);
+
+    // Swap the session
+    Process* pr = Process::get_instance();
+    if(pr->swapping_enabled())
+      std::thread{ &Process::session_deleted, pr, si->si_pid}.detach();
   }
 
-  std::optional<Process> Process::create(
+  void Process::create(
+    std::optional<Process> & dest,
     std::string process_id, std::string ip_address, int32_t port,
-    std::string hole_puncher_addr, int16_t max_sessions
+    std::string hole_puncher_addr, int16_t max_sessions,
+    bool verbose
   )
   {
     try {
       sockpp::tcp_connector socket;
       if(socket.connect(sockpp::inet_address(ip_address, port))) {
         spdlog::debug(
-          "Succesful connection to control plane {}:{} from {} on process {}",
-          ip_address, port, socket.address().to_string(), process_id
+          "Succesful connection to control plane {}:{} from {} on process {}, socket handle {}",
+          ip_address, port, socket.address().to_string(), process_id, socket.handle()
         );
-        return std::make_optional<Process>(process_id, hole_puncher_addr, std::move(socket), max_sessions);
+
+        // Copy elision is mandatory - no destruction of the socket
+        dest.emplace(
+          process_id, hole_puncher_addr, std::move(socket),
+          max_sessions, verbose
+        );
       } else
-        return std::optional<Process>();
+        dest.reset();
     } catch (...) {
-      return std::optional<Process>();
+      dest.reset();
     }
   }
 
@@ -57,7 +68,6 @@ namespace praas::process {
       _control_plane_socket.write(msg.data, bytes_size);
     }
 
-    // FIXME: here also accept new requests to connect from data plane (user).
     spdlog::info("Process {} begins work!", this->_process_id);
     praas::messages::RecvMessageBuffer msg;
     while(!_ending) {
@@ -106,26 +116,31 @@ namespace praas::process {
     );
 
     ErrorCode result = ErrorCode::SUCCESS;
-    // Check if we have capacity
-    if(_sessions.size() >= _max_sessions) {
-      result = ErrorCode::NO_MORE_CAPACITY;
-    } else {
-      // Verify conflicts - simple search
-      auto it = std::find_if(
-        _sessions.begin(), _sessions.end(),
-        [&msg](const praas::session::SessionFork & s) {
-          return s.session_id == msg.session_id();
+
+    {
+      std::lock_guard<std::mutex> guard(_sessions_mutex);
+      // Check if we have capacity
+      if(_sessions.size() >= static_cast<size_t>(_max_sessions)) {
+        result = ErrorCode::NO_MORE_CAPACITY;
+      } else {
+        // Verify conflicts - simple search
+        auto it = std::find_if(
+          _sessions.begin(), _sessions.end(),
+          [&msg](const praas::session::SessionFork & s) {
+            return s.session_id == msg.session_id();
+          }
+        );
+        if(it != _sessions.end()) {
+          result = ErrorCode::SESSION_CONFLICT; 
         }
-      );
-      if(it != _sessions.end()) {
-        result = ErrorCode::SESSION_CONFLICT; 
-      }
-      // Now we can start a session
-      else {
-        _sessions.emplace_back(msg.session_id(), msg.max_functions(), msg.memory_size());
-        _sessions.back().fork(_control_plane_socket.peer_address().to_string(), _hole_puncher_address);
+        // Now we can start a session
+        else {
+          _sessions.emplace_back(msg.session_id(), msg.max_functions(), msg.memory_size());
+          _sessions.back().fork(_control_plane_socket.peer_address().to_string(), _hole_puncher_address);
+        }
       }
     }
+
     return result;
   }
 
@@ -136,6 +151,47 @@ namespace praas::process {
     for(praas::session::SessionFork & session: _sessions)
       session.shutdown();
     _control_plane_socket.shutdown();
+  }
+
+  bool Process::swapping_enabled()
+  {
+    return _swapper.is_enabled();
+  }
+
+  void Process::session_deleted(int pid)
+  {
+    {
+      std::lock_guard<std::mutex> guard(_sessions_mutex);
+
+      // Check if we have the session
+      auto it = std::find_if(
+        _sessions.begin(), _sessions.end(),
+        [pid](const praas::session::SessionFork & s) {
+          return s.child_pid == pid;
+        }
+      );
+
+      if(it == _sessions.end()) {
+        spdlog::error("Can't swap session with PID {} because it doesn't exist!", pid);
+        return;
+      }
+
+      spdlog::debug("Swapping session {} to storage.", (*it).session_id);
+
+      // Swap the memory
+      _swapper.swap(
+        (*it).session_id,
+        reinterpret_cast<char*>((*it).memory.ptr()),
+        (*it).memory.size()
+      );
+
+      spdlog::debug("Swapped session {} to storage, deleting memory.", (*it).session_id);
+
+      // Now clean the object and unlink memory.
+      // We caught the SIGCHLD signal, which means we don't need to wait for the PID - no zombie.
+      _sessions.erase(it);
+
+    }
   }
 
 }

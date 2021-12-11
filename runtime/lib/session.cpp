@@ -21,7 +21,7 @@ namespace praas::session {
 
   std::tuple<std::string_view, std::string_view> split(std::string & str, char split_character)
   {
-    ssize_t pos = str.find(split_character);
+    auto pos = str.find(split_character);
     if(pos == std::string::npos)
       return std::make_tuple("", "");
     else
@@ -31,11 +31,15 @@ namespace praas::session {
       );
   }
 
-  SharedMemory::SharedMemory(const std::string& path, int file_descriptor, int32_t size, void* ptr):
-    _path(path),
+  SharedMemory::SharedMemory(
+    const std::string& path, int file_descriptor,
+    int32_t size, void* ptr, bool owned
+  ):
     _size(size),
     _fd(file_descriptor),
-    _ptr(ptr)
+    _path(path),
+    _ptr(ptr),
+    _owned(owned)
   {}
 
   SharedMemory::SharedMemory(SharedMemory && obj)
@@ -44,24 +48,30 @@ namespace praas::session {
     this->_fd = std::move(obj._fd);
     this->_path = std::move(obj._path);
     this->_ptr = std::move(obj._ptr);
+    this->_owned = std::move(obj._owned);
 
     obj._size = -1;
     obj._fd = -1;
     obj._path = "";
     obj._ptr = nullptr;
+    obj._owned = false;
   }
 
   SharedMemory& SharedMemory::operator=(SharedMemory && obj)
   {
-    this->_size = std::move(obj._size);
-    this->_fd = std::move(obj._fd);
-    this->_path = std::move(obj._path);
-    this->_ptr = std::move(obj._ptr);
+    if(this != &obj) {
+      this->_size = std::move(obj._size);
+      this->_fd = std::move(obj._fd);
+      this->_path = std::move(obj._path);
+      this->_ptr = std::move(obj._ptr);
+      this->_owned = std::move(obj._owned);
 
-    obj._size = -1;
-    obj._fd = -1;
-    obj._path = "";
-    obj._ptr = nullptr;
+      obj._size = -1;
+      obj._fd = -1;
+      obj._path = "";
+      obj._ptr = nullptr;
+      obj._owned = false;
+    }
 
     return *this;
   }
@@ -71,11 +81,15 @@ namespace praas::session {
     if(_ptr) {
       if(munmap(_ptr, _size) == -1) {
         spdlog::error("Failed to unmap shared memory!");
+      } else {
+        spdlog::debug("Unmap shared memory");
       }
     }
-    if(_fd != -1) {
+    if(_owned && _fd != -1) {
       if(shm_unlink(_path.c_str()) == -1) {
-        spdlog::error("Failed to unlink shared memory!");
+        spdlog::error("Failed to unlink shared memory at {}! Error: {}", _path, strerror(errno));
+      } else {
+        spdlog::debug("Unlink shared memory at {}.", _path);
       }
     }
   }
@@ -93,13 +107,21 @@ namespace praas::session {
       return std::optional<SharedMemory>{};
     }
 
-    if(ftruncate(fd, size * 1024) == -1) {
+    // kbytes -> bytes
+    size *= 1024;
+    if(ftruncate(fd, size) == -1) {
       spdlog::error("Couldn't resize shared memory!");
       return std::optional<SharedMemory>{};
     }
 
-    spdlog::debug("Created {} kbytes of shared memory at {} {}", size, session_id, session_id.length());
-    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size * 1024};
+    void* ptr = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
+    if(ptr == MAP_FAILED) {
+      spdlog::error("Failed to map shared memory");
+      return std::optional<SharedMemory>{};
+    }
+
+    spdlog::debug("Created {} kbytes of shared memory at {} for session_id {}", size, fmt::ptr(ptr), session_id);
+    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size, ptr, true};
   }
 
   std::optional<SharedMemory> SharedMemory::open(std::string session_id, int32_t size)
@@ -115,14 +137,16 @@ namespace praas::session {
       return std::optional<SharedMemory>{};
     }
 
-    void* ptr = mmap(NULL, size * 1024, PROT_WRITE, MAP_SHARED, fd, 0);
+    // kbytes -> bytes
+    size *= 1024;
+    void* ptr = mmap(NULL, size, PROT_WRITE, MAP_SHARED, fd, 0);
     if(ptr == MAP_FAILED) {
       spdlog::error("Failed to map shared memory");
       return std::optional<SharedMemory>{};
     }
 
-    spdlog::debug("Opened {} kbytes of shared memory at {}", size, session_id);
-    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size * 1024, ptr};
+    spdlog::debug("Opened {} kbytes of shared memory at {} for session {}", size, fmt::ptr(ptr), session_id);
+    return std::optional<SharedMemory>{std::in_place_t{}, session_id, fd, size, ptr};
   }
 
   SessionFork::SessionFork(std::string session_id, int32_t max_functions, int32_t memory_size):

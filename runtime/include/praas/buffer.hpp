@@ -14,6 +14,16 @@ namespace praas::buffer {
   {
     T* val;
     size_t size;
+
+    Buffer():
+      val(nullptr),
+      size(0)
+    {}
+
+    Buffer(T* val, size_t size):
+      val(val),
+      size(size)
+    {}
   };
 
   template<typename T>
@@ -40,7 +50,7 @@ namespace praas::buffer {
       }
     }
 
-    Buffer<T> retrieve_buffer(ssize_t size)
+    Buffer<T> retrieve_buffer(size_t size)
     {
       const std::lock_guard<std::mutex> lock(_mutex);
       if(_buffers.empty())
@@ -63,6 +73,6 @@ namespace praas::buffer {
     }
   };
 
-};
+}
 
 #endif
