@@ -11,6 +11,10 @@
     "shm_example": {
       "library":  "libexample.so",
       "function": "shm_example"
+    },
+    "shm_read_example": {
+      "library":  "libexample.so",
+      "function": "shm_read_example"
     }
   }
 }
