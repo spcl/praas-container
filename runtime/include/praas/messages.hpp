@@ -75,11 +75,16 @@ namespace praas::messages {
     // 16 bytes of session id
     // 18 bytes
 
-    static constexpr uint16_t BUF_SIZE = 18;
+    static constexpr uint16_t BUF_SIZE = 22;
     int8_t data[BUF_SIZE];
 
-    ssize_t fill_process_identification(std::string process_id);
-    ssize_t fill_session_identification(std::string session_id);
+    SendMessage()
+    {
+      memset(data, 0, BUF_SIZE);
+    }
+
+    void fill_process_identification(std::string process_id);
+    void fill_session_identification(std::string session_id);
   };
 
   struct RecvMessage {

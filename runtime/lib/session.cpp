@@ -248,8 +248,8 @@ namespace praas::session {
     // Announce our presence to the control plane and get the invocation.
     {
       praas::messages::SendMessage msg;
-      ssize_t bytes_size = msg.fill_session_identification(this->session_id);
-      connection.write(msg.data, bytes_size);
+      msg.fill_session_identification(this->session_id);
+      connection.write(msg.data, msg.BUF_SIZE);
     }
 
     spdlog::info("Session {} begins work!", this->session_id);

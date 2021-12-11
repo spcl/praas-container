@@ -5,18 +5,16 @@
 
 namespace praas::messages {
 
-  ssize_t SendMessage::fill_process_identification(std::string process_id)
+  void SendMessage::fill_process_identification(std::string process_id)
   {
     *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(SendMessage::Type::PROCESS_IDENTIFICATION);
     std::strncpy(reinterpret_cast<char*>(data + 2), process_id.data(), 16);
-    return 18;
   }
 
-  ssize_t SendMessage::fill_session_identification(std::string session_id)
+  void SendMessage::fill_session_identification(std::string session_id)
   {
     *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(SendMessage::Type::SESSION_IDENTIFICATION);
     std::strncpy(reinterpret_cast<char*>(data + 2), session_id.data(), 16);
-    return 18;
   }
 
   std::unique_ptr<RecvMessage> RecvMessageBuffer::parse(ssize_t data_size)

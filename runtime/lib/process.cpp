@@ -84,8 +84,8 @@ namespace praas::process {
     // Now let's identify ourselves to the control plane
     {
       praas::messages::SendMessage msg;
-      ssize_t bytes_size = msg.fill_process_identification(this->_process_id);
-      _control_plane_socket.write(msg.data, bytes_size);
+      msg.fill_process_identification(this->_process_id);
+      _control_plane_socket.write(msg.data, msg.BUF_SIZE);
     }
 
     spdlog::info("Process {} begins work!", this->_process_id);
