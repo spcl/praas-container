@@ -32,8 +32,7 @@ endif()
 ###
 include(dependencies)
 
-
-add_compile_options(-Wall -Wextra -pedantic -Werror)
+add_compile_options(-Wall -Wextra -pedantic)
 
 ###
 # Runtime library.

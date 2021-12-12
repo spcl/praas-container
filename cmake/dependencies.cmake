@@ -164,6 +164,8 @@ if(NOT AWSSDK_FOUND)
   set(ENABLE_TESTING OFF CACHE INTERNAL "")
   FetchContent_MakeAvailable(awsSDK)
   add_subdirectory(${awssdk_SOURCE_DIR} ${awssdk_BINARY_DIR})
+else()
+  message("Found AWS SDK at: ${awssdk_DIR} ${AWSSDK_DIR}")
 endif()
 
 ###
@@ -183,7 +185,7 @@ if(NOT TBB_FOUND)
   FetchContent_Populate(TBB)
   set(TBB_TEST OFF CACHE INTERNAL "")
   set(BUILD_SHARED_LIBS ON CACHE INTERNAL "")
-  FetchContent_MakeAvailable(awsSDK)
+  FetchContent_MakeAvailable(TBB)
   add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
 endif()
 
