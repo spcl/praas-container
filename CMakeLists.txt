@@ -76,6 +76,22 @@ target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:runt
 target_link_libraries(runtime_session PRIVATE runtime_library)
 
 ###
+# Process exec
+###
+file(GLOB process_exec_files "runtime/process/*.cpp")
+add_executable(process_exec ${process_exec_files})
+set_target_properties(process_exec PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin)
+target_include_directories(process_exec PUBLIC "runtime/include")
+target_include_directories(process_exec PUBLIC "runtime/process")
+set(targets runtime_library)
+foreach(target ${targets})
+  add_dependencies(process_exec ${target})
+  target_include_directories(process_exec SYSTEM PRIVATE $<TARGET_PROPERTY:${target},INTERFACE_INCLUDE_DIRECTORIES>)
+  target_link_libraries(process_exec PRIVATE ${target})
+endforeach()
+target_include_directories(process_exec SYSTEM PUBLIC ${threadpool_SOURCE_DIR})
+
+###
 # Local memory controller
 ###
 file(GLOB local_memory_files "runtime/local-memory/*.cpp")
