@@ -69,6 +69,9 @@ docker build -f docker/control_plane-dev.dockerfile . -t praas/control_plane-dev
 
 docker build -f docker/local_worker.dockerfile . -t praas/local_worker
 docker build -f docker/local_worker-dev.dockerfile . -t praas/local_worker-dev
+
+docker build -f docker/aws-sdk-s3.dockerfile . -t praas/aws-sdk-s3
+docker build --build-arg GITHUB_ACCESS_TOKEN="<token>" -f docker/runtime.dockerfile . -t praas/runtime
 ```
 
 ### OpenSSL
