@@ -76,6 +76,21 @@ target_include_directories(runtime_session SYSTEM PRIVATE $<TARGET_PROPERTY:runt
 target_link_libraries(runtime_session PRIVATE runtime_library)
 
 ###
+# Local memory controller
+###
+file(GLOB local_memory_files "runtime/local-memory/*.cpp")
+add_executable(local_memory ${local_memory_files})
+set_target_properties(local_memory PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin)
+target_include_directories(local_memory PUBLIC "runtime/local-memory")
+set(targets cxxopts::cxxopts TBB::tbb sockpp-static tcpunch spdlog::spdlog cxxopts::cxxopts)
+foreach(target ${targets})
+  add_dependencies(local_memory ${target})
+  target_include_directories(local_memory SYSTEM PRIVATE $<TARGET_PROPERTY:${target},INTERFACE_INCLUDE_DIRECTORIES>)
+  target_link_libraries(local_memory PRIVATE ${target})
+endforeach()
+target_include_directories(local_memory SYSTEM PUBLIC ${threadpool_SOURCE_DIR})
+
+###
 # Common system library.
 ###
 file(GLOB common_library_files "system/common/*.cpp")

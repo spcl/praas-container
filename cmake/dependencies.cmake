@@ -172,6 +172,22 @@ endif()
 find_package(Boost REQUIRED)
 
 ###
+# TBB - static libraries are discouraged
+###
+find_package(TBB COMPONENTS s3 QUIET)
+if(NOT TBB_FOUND)
+  message(STATUS "Downloading and building TBB dependency")
+  FetchContent_Declare(TBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+  )
+  FetchContent_Populate(TBB)
+  set(TBB_TEST OFF CACHE INTERNAL "")
+  set(BUILD_SHARED_LIBS ON CACHE INTERNAL "")
+  FetchContent_MakeAvailable(awsSDK)
+  add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
+endif()
+
+###
 # google test
 ###
 if(${RFAAS_WITH_TESTING})
