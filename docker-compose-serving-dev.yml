@@ -1,0 +1,72 @@
+version: '3.7'
+
+services:
+
+  redis:
+    image: redis:latest
+    expose:
+      - "6379"
+
+  tcpunch:
+    image: spcleth/tcpunch:latest
+    # Needed to correctly handle signals
+    tty: true
+    init: true
+    ports:
+      - "10000:10000"
+
+  serving:
+    image: praas/serving-dev
+    # Needed to correctly handle signals
+    tty: true
+    init: true
+    depends_on:
+      - tcpunch
+    expose:
+      - "8080"
+    volumes:
+      - ./${DEV}:/dev-praas
+      - ./${DEV}/examples:/code
+    environment:
+      - NUMPROCS=4
+      - HOLEPUNCHER_ADDR=tcpunch
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+
+  control_plane:
+    image: praas/control_plane-dev
+    # Needed to correctly handle signals
+    tty: true
+    init: true
+    depends_on:
+      - redis
+      - serving
+      - tcpunch
+    expose:
+      - "8080"
+      - "5050"
+    volumes:
+      - ./${DEV}:/dev-praas
+      - ./${SECRET_CERT}:/usr/local/etc/praas/server.pem:ro
+      - ./${SECRET_KEY}:/usr/local/etc/praas/server.key:ro
+    environment:
+      - REDIS_HOST=tcp://redis:6379
+      - LOCAL_WORKER=serving:8080
+      - IP_ADDRESS=control_plane
+      - HTTP_PORT=5050
+
+  haproxy:
+    image: haproxy:latest
+    depends_on:
+     - control_plane
+    volumes:
+      - ./deployment/conf/haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./${SECRET_CERT}:/usr/local/etc/praas/server.pem:ro
+      - ./${SECRET_KEY}:/usr/local/etc/praas/server.pem.key:ro
+      - ./${CLIENT_CERT}:/usr/local/etc/praas/client.pem:ro
+    ports:
+      - "8080:8080"
+      - "443:443"
+
+

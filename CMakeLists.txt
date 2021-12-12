@@ -162,4 +162,18 @@ target_link_libraries(local_worker PRIVATE spdlog::spdlog)
 target_link_libraries(local_worker PRIVATE sockpp-static)
 target_link_libraries(local_worker PRIVATE runtime_library)
 
+###
+# PraaS serving
+###
+file(GLOB praas_serving_files "system/praas-serving/*.cpp")
+add_executable(praas_serving ${praas_serving_files})
+target_include_directories(praas_serving PUBLIC "runtime/praas-serving")
+set_target_properties(praas_serving PROPERTIES RUNTIME_OUTPUT_DIRECTORY bin)
+set(targets cxxopts::cxxopts sockpp-static runtime_library common_library spdlog::spdlog)
+foreach(target ${targets})
+  add_dependencies(praas_serving ${target})
+  target_include_directories(praas_serving SYSTEM PRIVATE $<TARGET_PROPERTY:${target},INTERFACE_INCLUDE_DIRECTORIES>)
+  target_link_libraries(praas_serving PRIVATE ${target})
+endforeach()
+
 add_subdirectory(examples)
