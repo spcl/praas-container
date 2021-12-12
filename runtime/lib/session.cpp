@@ -251,6 +251,7 @@ namespace praas::session {
     std::from_chars(port_str.data(), port_str.data() + port_str.size(), port);
     sockpp::tcp_connector connection;
     try {
+      spdlog::debug("Connecting to control plane at {}:{}.", ip_address, port);
       if(!connection.connect(sockpp::inet_address(std::string{ip_address}, port))) {
         spdlog::error("Couldn't connect to control plane at {}.", control_plane_addr);
         return;
@@ -259,7 +260,6 @@ namespace praas::session {
       spdlog::error("Couldn't connect to control plane at {}.", control_plane_addr);
       return;
     }
-    spdlog::debug("Connected to control plane at {}:{}.", ip_address, port);
 
     // Announce our presence to the control plane and get the invocation.
     {

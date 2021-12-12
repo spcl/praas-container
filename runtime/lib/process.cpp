@@ -61,11 +61,11 @@ namespace praas::process {
 
   bool Process::connect(std::string ip_address, int32_t port)
   {
+    spdlog::debug(
+      "Connecting to control plane {}:{} from {} on process {}.",
+      ip_address, port, _control_plane_socket.address().to_string(), _process_id
+    );
     if(_control_plane_socket.connect(sockpp::inet_address(ip_address, port))) {
-      spdlog::debug(
-        "Succesful connection to control plane {}:{} from {} on process {}.",
-        ip_address, port, _control_plane_socket.address().to_string(), _process_id
-      );
       return true;
     } else {
       spdlog::error(
