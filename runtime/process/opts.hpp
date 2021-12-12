@@ -11,7 +11,6 @@ namespace praas::process {
     std::string hole_puncher_address;
     std::string process_id;
     int max_sessions;
-    int port;
     bool enable_swapping;
     bool verbose;
   };
