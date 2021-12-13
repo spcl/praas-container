@@ -65,6 +65,7 @@ int main(int argc, char ** argv)
   sigaction(SIGSEGV, &sa, NULL);
   sigaction(SIGTERM, &sa, NULL);
   sigaction(SIGPIPE, &sa, NULL);
+  sigaction(SIGBUS, &sa, NULL);
 
   // Catch SIGINT
   struct sigaction sigIntHandler;
