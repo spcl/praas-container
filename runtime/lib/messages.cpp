@@ -19,9 +19,18 @@ namespace praas::messages {
 
   void SendMessage::fill_session_close(int32_t memory_size, std::string session_id)
   {
-    *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(SendMessage::Type::SESSION_CLOSURE);
+    *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(SendMessage::Type::SESSION_STATUS);
     *reinterpret_cast<int32_t*>(data+2) = static_cast<int32_t>(memory_size);
-    std::strncpy(reinterpret_cast<char*>(data + 6), session_id.data(), 16);
+    *reinterpret_cast<int16_t*>(data+6) = static_cast<int16_t>(-1);
+    std::strncpy(reinterpret_cast<char*>(data + 8), session_id.data(), 16);
+  }
+
+  void SendMessage::fill_session_status(int32_t status, std::string session_id)
+  {
+    *reinterpret_cast<int16_t*>(data) = static_cast<int16_t>(SendMessage::Type::SESSION_STATUS);
+    *reinterpret_cast<int32_t*>(data+2) = static_cast<int32_t>(0);
+    *reinterpret_cast<int16_t*>(data+6) = static_cast<int16_t>(status);
+    std::strncpy(reinterpret_cast<char*>(data + 8), session_id.data(), 16);
   }
 
   std::unique_ptr<RecvMessage> RecvMessageBuffer::parse(ssize_t data_size)
@@ -29,11 +38,9 @@ namespace praas::messages {
     if(data_size != RecvMessageBuffer::EXPECTED_LENGTH)
       return nullptr;
     int16_t type = *reinterpret_cast<int16_t*>(data);
-    if(type == static_cast<int16_t>(RecvMessage::Type::SESSION_REQUEST)
-    ) {
+    if(type == static_cast<int16_t>(RecvMessage::Type::SESSION_REQUEST)) {
       return std::make_unique<SessionRequestMsg>(data + 2);
-    } else if(type == static_cast<int16_t>(RecvMessage::Type::INVOCATION_REQUEST)
-    ) {
+    } else if(type == static_cast<int16_t>(RecvMessage::Type::INVOCATION_REQUEST)){
       return std::make_unique<FunctionRequestMsg>(data + 2);
     } else {
       return nullptr;

@@ -90,10 +90,11 @@ namespace praas::process {
 
     spdlog::info("Process {} begins work!", this->_process_id);
     praas::messages::RecvMessageBuffer msg;
+    praas::messages::SendMessage send_msg;
     while(!_ending) {
 
       // Read requests to allocate new sessions
-      ssize_t read_size = _control_plane_socket.read(msg.data, msg.EXPECTED_LENGTH);
+      ssize_t read_size = _control_plane_socket.read_n(msg.data, msg.EXPECTED_LENGTH);
 
       if(_ending)
         break;
@@ -118,12 +119,14 @@ namespace praas::process {
       }
       ErrorCode result = ErrorCode::UNKNOWN_FAILURE;
       if(req.get()->type() == praas::messages::RecvMessage::Type::SESSION_REQUEST) {
-        result = allocate_session(*dynamic_cast<praas::messages::SessionRequestMsg*>(req.get()));
+        auto ptr = dynamic_cast<praas::messages::SessionRequestMsg*>(req.get());
+        result = allocate_session(*ptr);
+        // Notify the control plane about success/failure
+        send_msg.fill_session_status(static_cast<int16_t>(result), ptr->session_id());
+        _control_plane_socket.write(send_msg.data, send_msg.BUF_SIZE);
       } else {
         spdlog::error("Unknown type of request!");
       }
-      // Notify the control plane about success/failure
-      _control_plane_socket.write(&result, sizeof(ErrorCode));
     }
     spdlog::info("Process ends work!");
   }
