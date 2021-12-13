@@ -162,7 +162,7 @@ namespace praas::session {
           );
           return true;
         }
-        payload_bytes = connection.read(buf.val, parsed_msg->payload());
+        payload_bytes = connection.read_n(buf.val, parsed_msg->payload());
         spdlog::debug("Function {}, received {} payload", parsed_msg->function_id(), payload_bytes);
 
       } else {
