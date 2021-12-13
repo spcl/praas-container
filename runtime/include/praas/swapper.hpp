@@ -22,10 +22,12 @@ namespace praas::swapper {
     bool _enabled;
 
     static constexpr char DEFAULT_S3_BUCKET[] = "praas-swapping";
+    const char* _user_s3_bucket;
 
     S3Swapper(bool verbose):
       _s3_client(std::optional<Aws::S3::S3Client>{}),
-      _enabled(false)
+      _enabled(false),
+      _user_s3_bucket(nullptr)
     {
       if(verbose)
         _s3_options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Debug;
