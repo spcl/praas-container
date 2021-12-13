@@ -111,7 +111,8 @@ if(NOT tcpunch_FOUND)
     GIT_TAG         main
     SOURCE_SUBDIR   client
   )
-  FetchContent_MakeAvailable(tcpunch)
+  FetchContent_Populate(tcpunch)
+  add_subdirectory(${tcpunch_SOURCE_DIR}/client ${tcpunch_BINARY_DIR})
 endif()
 
 ###
