@@ -7,15 +7,22 @@ services:
     expose:
       - "6379"
 
-  control_plane:
-    image: praas/control_plane-dev
+  tcpunch:
+    image: spcleth/tcpunch:latest
     # Needed to correctly handle signals
     tty: true
     init: true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    ports:
+      - "10000:10000"
+
+  control_plane:
+    image: spcleth/praas:control_plane-dev
+    # Needed to correctly handle signals
+    tty: true
+    init: true
     depends_on:
       - redis
+      - tcpunch
     ports:
       - "8080:8080"
     expose:
@@ -27,8 +34,8 @@ services:
       - ./${SECRET_KEY}:/usr/local/etc/praas/server.key:ro
     environment:
       - REDIS_HOST=tcp://redis:6379
-      - LOCAL_WORKER=host.docker.internal:9000
-      - IP_ADDRESS=host.docker.internal
+      - LOCAL_WORKER=${LOCAL_WORKER}
+      - IP_ADDRESS=${IP_ADDRESS}
       - HTTP_PORT=5050
 
   haproxy:
