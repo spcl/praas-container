@@ -1,5 +1,9 @@
 {
   "functions": {
+    "noop": {
+      "library":  "libexample.so",
+      "function": "noop"
+    },
     "example": {
       "library":  "libexample.so",
       "function": "example"

@@ -4,6 +4,16 @@
 
 #include <praas/output.hpp>
 
+extern "C" int noop(
+  uint8_t* input, size_t bytes, uint8_t*, size_t,
+  const std::string& function_id, praas::output::Channel* out
+)
+{
+  out->send(reinterpret_cast<char*>(input), bytes, function_id);
+  return 0;
+}
+
+
 extern "C" int example(
   uint8_t*, size_t, uint8_t*, size_t,
   const std::string& function_id, praas::output::Channel* out
