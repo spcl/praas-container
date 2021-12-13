@@ -11,6 +11,7 @@
 #include <praas/function.hpp>
 #include <praas/session.hpp>
 #include <praas/output.hpp>
+#include <praas/buffer.hpp>
 
 namespace praas::function {
 
@@ -95,6 +96,7 @@ namespace praas::function {
     spdlog::debug("Invoking function {}, invocation id {}, with {} payload", fname, function_id, bytes);
     FunctionWorker & worker = FunctionWorkers::get(std::this_thread::get_id());
     worker._invoke(fname, function_id, bytes, buf, shm, channel);
+    FunctionWorkers::_bufs->return_buffer(std::move(buf));
     spdlog::debug("Invoked function {}, invocation id {}, with {} payload", fname, function_id, bytes);
   }
 
@@ -121,10 +123,12 @@ namespace praas::function {
 
   std::unordered_map<std::thread::id, FunctionWorker*> FunctionWorkers::_workers;
   FunctionsLibrary* FunctionWorkers::_library;
+  praas::buffer::BufferQueue<uint8_t>* FunctionWorkers::_bufs;
 
-  void FunctionWorkers::init(FunctionsLibrary& library)
+  void FunctionWorkers::init(FunctionsLibrary& library, praas::buffer::BufferQueue<uint8_t>& bufs)
   {
     FunctionWorkers::_library = &library;
+    FunctionWorkers::_bufs = &bufs;
   }
 
   void FunctionWorkers::free()

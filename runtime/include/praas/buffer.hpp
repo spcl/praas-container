@@ -7,6 +7,8 @@
 #include <queue>
 #include <mutex>
 
+#include <spdlog/spdlog.h>
+
 namespace praas::buffer {
 
   template<typename T>

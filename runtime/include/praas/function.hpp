@@ -60,8 +60,9 @@ namespace praas::function {
   struct FunctionWorkers {
     static std::unordered_map<std::thread::id, FunctionWorker*> _workers;
     static FunctionsLibrary* _library;
+    static praas::buffer::BufferQueue<uint8_t>* _bufs;
 
-    static void init(FunctionsLibrary&);
+    static void init(FunctionsLibrary&, praas::buffer::BufferQueue<uint8_t>&);
     static void free();
     static FunctionWorker& get(std::thread::id thread_id);
   };

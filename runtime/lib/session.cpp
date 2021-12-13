@@ -218,8 +218,8 @@ namespace praas::session {
   }
 
   Session::Session(std::string session_id, int32_t max_functions, int32_t memory_size):
-    // FIXME: parameters - should depend on max functions
-    _buffers(10, 1024*1024),
+    // FIXME: buffer size - configurable?
+    _buffers(2*max_functions, 6*1024*1024),
     _pool(max_functions),
     _memory_size(memory_size),
     session_id(session_id),
@@ -227,7 +227,7 @@ namespace praas::session {
   {
     // FIXME: open shared memory
     // FIXME: max functions
-    praas::function::FunctionWorkers::init(_library);
+    praas::function::FunctionWorkers::init(_library, _buffers);
   }
 
   Session::~Session()
@@ -244,6 +244,7 @@ namespace praas::session {
       return;
     }
     this->_shm = std::move(shm.value());
+
 
     auto [ip_address, port_str] = split(control_plane_addr, ':');
     int port;
