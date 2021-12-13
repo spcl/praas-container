@@ -1,6 +1,7 @@
 
 #include <optional>
 #include <sys/wait.h>
+#include <chrono>
 
 #include <sockpp/inet_address.h>
 #include <sockpp/tcp_connector.h>
@@ -78,8 +79,10 @@ namespace praas::process {
 
   void Process::start()
   {
-    if (!_control_plane_socket)
+    if (!_control_plane_socket) {
       spdlog::error("Couldn't connect to control plane! {}", _control_plane_socket.last_error_str());
+      return;
+    }
 
     // Now let's identify ourselves to the control plane
     {
@@ -105,7 +108,7 @@ namespace praas::process {
         );
         continue;
       } else if (read_size == 0){
-        spdlog::debug(
+        spdlog::info(
           "End of file on connection with {}.",
           _control_plane_socket.peer_address().to_string()
         );
@@ -175,7 +178,7 @@ namespace praas::process {
 
   void Process::shutdown()
   {
-    spdlog::info("Shutdown process!");
+    spdlog::debug("Shutdown process!");
     _ending = true;
     for(praas::session::SessionFork & session: _sessions)
       session.shutdown();
@@ -189,6 +192,7 @@ namespace praas::process {
 
   void Process::session_deleted(int pid)
   {
+    auto begin = std::chrono::high_resolution_clock::now();
     int32_t swapped_memory = 0;
     std::string session_id;
     {
@@ -208,8 +212,6 @@ namespace praas::process {
       session_id = (*it).session_id;
 
       if(swapping_enabled()) {
-
-        spdlog::debug("Swapping session {} to storage.", (*it).session_id);
 
         // Swap the memory
         _swapper.swap(
@@ -239,6 +241,10 @@ namespace praas::process {
     praas::messages::SendMessage msg;
     msg.fill_session_close(swapped_memory, session_id);
     _control_plane_socket.write(msg.data, msg.BUF_SIZE);
+    auto end = std::chrono::high_resolution_clock::now();
+    uint64_t duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+    std::cerr << "swap_time," << swapped_memory << "," << duration << '\n';
+    spdlog::error("Write {} bytes", msg.BUF_SIZE);
   }
 
 }
