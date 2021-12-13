@@ -14,6 +14,23 @@
 
 namespace praas::swapper {
 
+  struct DiskSwapper
+  {
+    static constexpr char DEFAULT_LOCATION[] = "/praas-swapping";
+    const char* _user_location;
+    bool _enabled;
+
+    DiskSwapper(bool verbose):
+      _user_location(nullptr),
+      _enabled(false)
+    {}
+
+    void shutdown_swapping();
+    bool swap(std::string_view session_id, char* memory, int32_t size);
+    bool swap_in(std::string_view session_id, char* memory, int32_t size);
+    bool enable_swapping();
+  };
+
   struct S3Swapper
   {
     // AWS S3 configuration
