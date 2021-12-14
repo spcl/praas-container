@@ -48,18 +48,19 @@ void signal_handler(int)
   instance->shutdown();
 }
 
-void fork_memory(std::string process_id)
+void fork_memory()
 {
   pid_t child_pid = vfork();
   if(child_pid == 0) {
-    auto out_file = ("global_memory_" + process_id);
+    std::string out_file = ("/praas-logs/local_memory");
     int fd = open(out_file.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     dup2(fd, 1);
     dup2(fd, 2);
     const char * argv[] = {
       "/dev-praas/bin/local_memory",
-      "--control-plane-addr", "s2",
+      "--global-memory-addr", "s2",
       "--hole-puncher-addr", "s3",
+      //"-v",
       nullptr
     };
     int ret = execv(argv[0], const_cast<char**>(&argv[0]));
@@ -112,6 +113,7 @@ int main(int argc, char ** argv)
   );
   if(!process.has_value())
     return 1;
+  fork_memory();
   instance = &process.value();
   process.value().start();
 

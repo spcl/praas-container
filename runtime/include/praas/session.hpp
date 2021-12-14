@@ -172,7 +172,7 @@ namespace praas::session {
       }
 
       // Invoke function
-      _pool.push_task(
+      std::thread{
         praas::function::FunctionWorker::invoke,
         parsed_msg->function_name(),
         parsed_msg->function_id(),
@@ -182,7 +182,18 @@ namespace praas::session {
         &this->_shm,
         &out_connection,
         &memory
-      );
+      }.detach();
+      //_pool.push_task(
+      //  praas::function::FunctionWorker::invoke,
+      //  parsed_msg->function_name(),
+      //  parsed_msg->function_id(),
+      //  payload_bytes,
+      //  buf,
+      //  // Pass pointer to avoid copying
+      //  &this->_shm,
+      //  &out_connection,
+      //  &memory
+      //);
       return true;
     }
   };

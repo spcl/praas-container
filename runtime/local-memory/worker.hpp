@@ -10,6 +10,7 @@
 #include "messages.hpp"
 #include "connections.hpp"
 #include "cache.hpp"
+#include "server.hpp"
 
 namespace praas::local_memory {
 
@@ -17,7 +18,7 @@ namespace praas::local_memory {
 
     static Cache* cache;
 
-    static void handle_session_message(RecvBuffer buffer, Connection* conn)
+    static void handle_session_message(RecvBuffer buffer, Connection* conn, Server* server)
     {
       int32_t payload = buffer.payload(); 
       uint8_t* data = nullptr;
@@ -26,7 +27,8 @@ namespace praas::local_memory {
         // FIXME: buffer ring
         data = new uint8_t[payload];
 
-        ssize_t recv_data = conn->conn.read(data, payload);
+        spdlog::debug("Reed payload for {}", buffer.object_name());
+        ssize_t recv_data = conn->conn.read_n(data, payload);
         if(recv_data < payload) {
           spdlog::error(
             "Incorrect receive of {} bytes from {}, expected {}",
@@ -36,8 +38,13 @@ namespace praas::local_memory {
         }
       }
       // Make the connection available for polling again.
-      conn->busy.store(false);
+      //conn->busy.store(false);
+      if(!server->mod_epoll(conn->conn.handle(), conn, EPOLLIN | EPOLLPRI | EPOLLRDHUP | EPOLLONESHOT)) {
+        spdlog::error("Couldn't add the process to epoll,closing connection");
+        return;
+      }
 
+      spdlog::debug("Access for {}", buffer.object_name());
       // FIXME: create should go to global manager
       // FIXME: if get/put/delete fails, we need to go to somewhere else
       bool result = false;
@@ -74,14 +81,16 @@ namespace praas::local_memory {
       if(ret_payload > 0)
         conn->conn.write(accessor->second.data, ret_payload);
 
+      spdlog::debug("Done {}", buffer.object_name());
       accessor.release();
-      delete[] data;
+      spdlog::debug("Released {}", buffer.object_name());
+      //delete[] data;
     }
 
-    static void handle_message(RecvBuffer buffer, Connection* conn)
+    static void handle_message(RecvBuffer buffer, Connection* conn, Server* server)
     {
       if(conn->type == Connection::Type::SESSION) {
-        handle_session_message(std::move(buffer), conn);
+        handle_session_message(std::move(buffer), conn, server);
       }
     }
 

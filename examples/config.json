@@ -20,13 +20,13 @@
       "library":  "libexample.so",
       "function": "shm_read_example"
     },
-    "lm_benchmark_initialize": {
+    "lm_benchmark_ini": {
       "library":  "libexample.so",
-      "function": "shm_read_example"
+      "function": "lm_benchmark_initialize"
     },
-    "lm_benchmark_read": {
+    "lm_benchmark_rea": {
       "library":  "libexample.so",
-      "function": "shm_read_example"
+      "function": "lm_benchmark_read"
     }
   }
 }

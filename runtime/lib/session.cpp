@@ -10,6 +10,9 @@
 #include <sockpp/tcp_socket.h>
 #include <sockpp/tcp_connector.h>
 #include <tcpunch.h>
+#include <sys/types.h>          /* See NOTES */                                 
+#include <sys/socket.h>                                                         
+#include <netinet/tcp.h>
 
 #include <praas/session.hpp>
 #include <praas/buffer.hpp>
@@ -184,7 +187,7 @@ namespace praas::session {
     // FIXME: here we should have a fork of process with restricted permissions
     child_pid = vfork();
     if(child_pid == 0) {
-      auto out_file = ("session_" + session_id);
+      auto out_file = ("/praas-logs/session_" + session_id);
       int fd = open(out_file.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
       dup2(fd, 1);
       dup2(fd, 2);
@@ -198,7 +201,8 @@ namespace praas::session {
         "--session-id", session_id.c_str(),
         "--shared-memory-size", memory_size_str.c_str(),
         "--max-functions", max_functions_str.c_str(),
-        "-v", nullptr
+        nullptr
+        //"-v", nullptr
       };
       int ret = execv(argv[0], const_cast<char**>(&argv[0]));
       if(ret == -1) {
@@ -283,6 +287,10 @@ namespace praas::session {
     inet_ntop(AF_INET, &addr, addrstr, 16);
     spdlog::info("Attempt pairing on session {}, connect to resolved name {}", session_id, addrstr);
     int sock_fd = pair(this->session_id.c_str(), addrstr);
+    int one = 1;
+    setsockopt(sock_fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+    one = 0;
+    setsockopt(sock_fd, SOL_TCP, TCP_CORK, &one, sizeof(one));
     _data_plane_socket = sockpp::tcp_socket{sock_fd};
     spdlog::info(
       "Session {} connected data plane to: {}",

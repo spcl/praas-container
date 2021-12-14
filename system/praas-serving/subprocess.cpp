@@ -35,19 +35,29 @@ namespace praas::serving {
       strcat(addr, ":");
       strcat(addr, std::to_string(req.port()).c_str());
 
+      //use_docker = false;
       if(use_docker) {
         std::string process_id = req.process_id();
-        // FIXME: do not hardcode this
+        // FIXME: do not hardcode this - both
         const char * argv[] = {
           "/usr/bin/docker", "run",
-          "praas/runtime",
+          "-e", "SWAPPING_S3_BUCKET=praaas-swapping",
+          "-e", "AWS_ACCESS_KEY_ID=***REMOVED***",
+          "-e", "AWS_SECRET_ACCESS_KEY=***REMOVED***",
+          "-v", "/home/ubuntu/memory/logs:/praas-logs",
+          "-v", "/home/ubuntu/memory/build/examples:/code",
+          "-v", "/home/ubuntu/memory/swaps:/praas-swapping",
+          //"--shm-size", "3145728000",
+          "--cpuset-cpus", "0,1",
+          "spcleth/praas:runtime",
           "/dev-praas/bin/process_exec",
           "--process-id", process_id.c_str(),
           "--control-plane-address", addr,
           "--hole-puncher-address", hole_puncher_address.c_str(),
           "--max-sessions", max_sessions_str.c_str(),
           "--enable-swapping", enable_swapping_str.c_str(),
-          "-v", nullptr
+          nullptr
+          //"-v", nullptr
         };
         for(int i = 0; i < 15;++i)
           spdlog::debug(argv[i]);
@@ -60,7 +70,8 @@ namespace praas::serving {
       } else {
         std::string process_id = req.process_id();
         const char * argv[] = {
-          "/dev-praas/bin/process_exec",
+          "/usr/bin/valgrind",
+          "bin/process_exec",
           "--process-id", process_id.c_str(),
           "--control-plane-address", addr,
           "--hole-puncher-address", hole_puncher_address.c_str(),

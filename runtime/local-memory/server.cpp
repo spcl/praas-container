@@ -58,20 +58,22 @@ namespace praas::local_memory {
 
           // This should be a session - peers we accept somewhere else
           Connection* ptr = _session_conns.insert(std::move(conn));
-          add_epoll(ptr->conn.handle(), ptr, EPOLLIN | EPOLLPRI);
+          add_epoll(ptr->conn.handle(), ptr, EPOLLIN | EPOLLPRI | EPOLLRDHUP | EPOLLONESHOT);
 
         }
         // New message from a process. 
         else {
           Connection* conn_obj = static_cast<Connection*>(events[i].data.ptr);
-          if(conn_obj->busy.load())
+          if(conn_obj->busy.load()) {
+            spdlog::debug("busy, skip");
             continue;
+          }
           sockpp::tcp_socket* conn = &conn_obj->conn;
 
           spdlog::debug("Polling new data from {}", conn->peer_address().to_string());
           RecvBuffer msg;
 
-          ssize_t recv_data = conn->read(msg.buffer, msg.BUF_SIZE);
+          ssize_t recv_data = conn->read_n(msg.buffer, msg.BUF_SIZE);
 
           if(recv_data == 0) {
             spdlog::debug("End of file on connection with {}.", conn->peer_address().to_string());
@@ -95,8 +97,9 @@ namespace praas::local_memory {
           }
 
           // Store process sending the message in user-provided data
-          _pool.push_task(Worker::handle_message, msg, conn_obj);
-          conn_obj->busy.store(true);
+          //_pool.push_task(Worker::handle_message, msg, conn_obj);
+          std::thread{Worker::handle_message, msg, conn_obj, this}.detach();
+          //conn_obj->busy.store(true);
 
         }
       }
