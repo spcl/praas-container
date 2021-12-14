@@ -1,5 +1,5 @@
-FROM praas/aws-sdk-s3 AS aws
-FROM praas/cpp_builder AS builder
+FROM spcleth/praas:aws-sdk-s3 AS aws
+FROM spcleth/praas:cpp_builder AS builder
 
 ARG GITHUB_ACCESS_TOKEN
 
@@ -10,7 +10,7 @@ RUN apt-get install -y --no-install-recommends libhiredis0.14 libhiredis-dev lib
 WORKDIR /build/
 ADD . /source/
 RUN cmake -DCMAKE_PREFIX_PATH=/opt/ -DCMAKE_BUILD_TYPE=Release -B . -S /source/
-RUN cmake --build . -j4 --target process_exec
+RUN cmake --build . -j4 --target process_exec runtime_session
 
 FROM ubuntu:jammy
 
