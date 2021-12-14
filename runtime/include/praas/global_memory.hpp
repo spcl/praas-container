@@ -51,7 +51,7 @@ namespace praas::global {
         connection->write(obj.data, obj.size);
 
       // Wait for result
-      connection->read(msg.buffer, msg.BUF_SIZE);
+      connection->read_n(msg.buffer, msg.BUF_SIZE);
       // No payload on this request
       return !msg.is_error();
     }
@@ -69,18 +69,28 @@ namespace praas::global {
       connection->write(msg.buffer, msg.BUF_SIZE);
 
       // Wait for result
-      connection->read(msg.buffer, msg.BUF_SIZE);
+      connection->read_n(msg.buffer, msg.BUF_SIZE);
       if(msg.is_error())
         return std::optional<Object>{};
 
       Object obj{new uint8_t[msg.payload()], static_cast<size_t>(msg.payload())};
-      connection->read(obj.data, obj.size);
+      connection->read_n(obj.data, obj.size);
       return obj;
     }
 
-    bool put(const std::string& id, Object)
+    bool put(const std::string& id, Object obj)
     {
-      return id == "";
+      SessionMessage msg;
+      msg.send(SessionMessage::Type::PUT, id, obj.size);
+
+      connection->write(msg.buffer, msg.BUF_SIZE);
+      if(obj.size)
+        connection->write(obj.data, obj.size);
+
+      // Wait for result
+      connection->read_n(msg.buffer, msg.BUF_SIZE);
+      // No payload on this request
+      return !msg.is_error();
     }
   };
 

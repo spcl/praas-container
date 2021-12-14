@@ -16,6 +16,8 @@
 #include <praas/function.hpp>
 #include <praas/swapper.hpp>
 
+#include "../include/praas/global_memory.hpp"
+
 using praas::buffer::BufferQueue;
 
 namespace praas::session {
@@ -200,7 +202,7 @@ namespace praas::session {
       };
       int ret = execv(argv[0], const_cast<char**>(&argv[0]));
       if(ret == -1) {
-        spdlog::error("Executor process failed {}, reason {}", errno, strerror(errno));
+        spdlog::error("Session Executor process failed {}, reason {}", errno, strerror(errno));
         exit(1);
       }
     } else {
@@ -269,6 +271,10 @@ namespace praas::session {
       connection.write(msg.data, msg.BUF_SIZE);
     }
 
+    sockpp::tcp_connector mem_conn;
+    mem_conn.connect(sockpp::inet_address("127.0.0.1", 7000));
+    praas::global::Memory memory{&mem_conn};
+
     spdlog::info("Session {} begins work!", this->session_id);
 
     // Translate the address.
@@ -287,9 +293,9 @@ namespace praas::session {
     praas::messages::RecvMessageBuffer msg;
     praas::output::Channel output_channel{_data_plane_socket};
 
-    receive(connection, output_channel, msg);
+    receive(connection, output_channel, memory, msg);
     while(!ending) {
-      if(!receive(_data_plane_socket, output_channel, msg))
+      if(!receive(_data_plane_socket, output_channel, memory, msg))
         break;
     }
 

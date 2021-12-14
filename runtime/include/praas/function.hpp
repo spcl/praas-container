@@ -10,6 +10,7 @@
 #include <sockpp/tcp_connector.h>
 
 #include <praas/buffer.hpp>
+#include <praas/global_memory.hpp>
 
 namespace praas::output {
   struct Channel;
@@ -26,7 +27,7 @@ namespace praas::function {
     std::unordered_map<std::string, void*> _functions;
     static constexpr char DEFAULT_CODE_LOCATION[] = "/code";
     static constexpr char DEFAULT_USER_CONFIG_LOCATION[] = "config.json";
-    typedef int (*FuncType)(uint8_t*, uint32_t, uint8_t*, uint32_t, const std::string&, praas::output::Channel*);
+    typedef int (*FuncType)(uint8_t*, uint32_t, uint8_t*, uint32_t, const std::string&, praas::output::Channel*, praas::global::Memory*);
 
     FunctionsLibrary();
     ~FunctionsLibrary();
@@ -46,14 +47,16 @@ namespace praas::function {
       std::string fname, std::string function_id,
       ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
       const praas::session::SharedMemory* shm,
-      praas::output::Channel* connection
+      praas::output::Channel* connection,
+      praas::global::Memory* memory
     );
   private:
     void _invoke(
       const std::string& fname, const std::string& function_id,
       ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
       const praas::session::SharedMemory* shm,
-      praas::output::Channel* connection
+      praas::output::Channel* connection,
+      praas::global::Memory* memory
     );
   };
 

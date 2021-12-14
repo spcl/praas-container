@@ -5,6 +5,7 @@
 #include <climits>
 #include <charconv>
 
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/time.h>
 #include <execinfo.h>
@@ -45,6 +46,31 @@ void signal_handler(int)
 {
   assert(instance);
   instance->shutdown();
+}
+
+void fork_memory(std::string process_id)
+{
+  pid_t child_pid = vfork();
+  if(child_pid == 0) {
+    auto out_file = ("global_memory_" + process_id);
+    int fd = open(out_file.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    dup2(fd, 1);
+    dup2(fd, 2);
+    const char * argv[] = {
+      "/dev-praas/bin/local_memory",
+      "--control-plane-addr", "s2",
+      "--hole-puncher-addr", "s3",
+      nullptr
+    };
+    int ret = execv(argv[0], const_cast<char**>(&argv[0]));
+    if(ret == -1) {
+      spdlog::error("Memory executor process failed {}, reason {}", errno, strerror(errno));
+      exit(1);
+    }
+  } else {
+    spdlog::debug("Launched local memory, PID {}", child_pid);
+  }
+
 }
 
 int main(int argc, char ** argv)

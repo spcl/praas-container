@@ -98,7 +98,9 @@ namespace praas::session {
 
     template<typename InSocket>
     bool receive(
-      InSocket && connection, praas::output::Channel & out_connection, praas::messages::RecvMessageBuffer & msg
+      InSocket && connection, praas::output::Channel & out_connection,
+      praas::global::Memory& memory,
+      praas::messages::RecvMessageBuffer & msg
     )
     {
       spdlog::debug(
@@ -178,7 +180,8 @@ namespace praas::session {
         buf,
         // Pass pointer to avoid copying
         &this->_shm,
-        &out_connection
+        &out_connection,
+        &memory
       );
       return true;
     }

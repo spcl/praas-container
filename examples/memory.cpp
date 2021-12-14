@@ -15,10 +15,18 @@ int main()
   spdlog::info("Send create, result {}", result);
 
   auto obj = memory.get("/obj1");
-  spdlog::info("Send get, expected result {}", obj.value().ptr<char>());
+  spdlog::info("Send get, expected result {} = {}, {}", buf, obj.value().ptr<char>(), obj.value().size);
+  spdlog::info("Send get, expected result {} = {}", (int)buf[0], (int)obj.value().ptr<char>()[0]);
 
   auto obj2 = memory.get("/obj2");
   spdlog::info("Send get, expected result false: {}", obj2.has_value());
+
+  char buf2[] = "MY SECRET2";
+  auto obj3 = memory.put("/obj1", praas::global::Object{buf2, strlen(buf2) + 1});
+  spdlog::info("Send put, expected result ok: {}", obj3);
+
+  auto obj4 = memory.get("/obj1");
+  spdlog::info("Send get, expected result {}", obj4.value().ptr<char>());
 
   conn.close();
   return 0;

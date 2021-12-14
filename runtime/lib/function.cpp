@@ -90,12 +90,13 @@ namespace praas::function {
     std::string fname, std::string function_id,
     ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
     const praas::session::SharedMemory* shm,
-    praas::output::Channel* channel
+    praas::output::Channel* channel,
+    praas::global::Memory* memory
   )
   {
     spdlog::debug("Invoking function {}, invocation id {}, with {} payload", fname, function_id, bytes);
     FunctionWorker & worker = FunctionWorkers::get(std::this_thread::get_id());
-    worker._invoke(fname, function_id, bytes, buf, shm, channel);
+    worker._invoke(fname, function_id, bytes, buf, shm, channel, memory);
     FunctionWorkers::_bufs->return_buffer(std::move(buf));
     spdlog::debug("Invoked function {}, invocation id {}, with {} payload", fname, function_id, bytes);
   }
@@ -104,7 +105,8 @@ namespace praas::function {
     const std::string& fname, const std::string& function_id,
     ssize_t bytes, praas::buffer::Buffer<uint8_t> buf,
     const praas::session::SharedMemory* shm,
-    praas::output::Channel* channel
+    praas::output::Channel* channel,
+    praas::global::Memory* memory
   )
   {
     auto func_ptr = _library.get_function(fname);
@@ -116,7 +118,7 @@ namespace praas::function {
     int return_code = (*func_ptr)(
       buf.val, bytes,
       reinterpret_cast<uint8_t*>(shm->ptr()), shm->size(),
-      function_id, channel
+      function_id, channel, memory
     );
     channel->mark_end(return_code, function_id);
   }

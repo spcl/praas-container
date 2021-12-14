@@ -19,6 +19,14 @@
     "shm_read_example": {
       "library":  "libexample.so",
       "function": "shm_read_example"
+    },
+    "lm_benchmark_initialize": {
+      "library":  "libexample.so",
+      "function": "shm_read_example"
+    },
+    "lm_benchmark_read": {
+      "library":  "libexample.so",
+      "function": "shm_read_example"
     }
   }
 }
